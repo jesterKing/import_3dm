@@ -7,14 +7,17 @@ def read_some_data(context, filepath, import_hidden):
         col = bpy.data.collections["Rhino3D"]
     else:
         col = bpy.data.collections.new("Rhino3D")
+    
+    layers = {}
 
-    def add_object(name, verts, faces):
+    def add_object(name, verts, faces, layer):
 
         mesh = bpy.data.meshes.new(name=name)
         mesh.from_pydata(verts, [], faces)
         ob = bpy.data.objects.new(name=name, object_data=mesh)
         ob.location = (0.0, 0.0, 0.0)
-        col.objects.link(ob)
+        layer.objects.link(ob)
+        #col.objects.link(ob)
 
     model = r3d.File3dm.Read(filepath)
     for obid in range(len(model.Objects)):
@@ -26,6 +29,15 @@ def read_some_data(context, filepath, import_hidden):
             n = str(og.ObjectType).split(".")[1]+" " + str(attr.Id)
         else:
             n = attr.Name
+        layername = "Default"
+        if attr.LayerIndex != -1:
+            layername = "Layer " + str(attr.LayerIndex)
+        if layername in layers:
+            layer = layers[layername]
+        else:
+            layer = bpy.data.collections.new(layername)
+            col.children.link(layer)
+            layers[layername] = layer
         msh = [og.Faces[f].GetMesh(r3d.MeshType.Any) for f in range(len(og.Faces)) if type(og.Faces[f])!=list]
         fidx=0
         faces = []
@@ -35,7 +47,7 @@ def read_some_data(context, filepath, import_hidden):
             faces.extend([list(map(lambda x: x + fidx, m.Faces[f])) for f in range(len(m.Faces))])
             fidx = fidx + len(m.Vertices)
             vertices.extend([(m.Vertices[v].X, m.Vertices[v].Y, m.Vertices[v].Z) for v in range(len(m.Vertices))])
-        add_object(n, vertices, faces)
+        add_object(n, vertices, faces, layer)
 
     bpy.data.scenes[0].collection.children.link(col)
 
