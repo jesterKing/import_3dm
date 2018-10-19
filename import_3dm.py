@@ -2,7 +2,7 @@ import bpy
 import rhino3dm as r3d
 
 
-def read_some_data(context, filepath, import_hidden):
+def read_3dm(context, filepath, import_hidden):
     if "Rhino3D" in bpy.data.collections.keys():
         col = bpy.data.collections["Rhino3D"]
     else:
@@ -11,13 +11,16 @@ def read_some_data(context, filepath, import_hidden):
     layers = {}
 
     def add_object(name, verts, faces, layer):
-
+        """
+        Add a new object with given mesh data, link to
+        collection given by layer
+        """
         mesh = bpy.data.meshes.new(name=name)
         mesh.from_pydata(verts, [], faces)
         ob = bpy.data.objects.new(name=name, object_data=mesh)
+        # Rhino data is all in world space, so add object at 0,0,0
         ob.location = (0.0, 0.0, 0.0)
         layer.objects.link(ob)
-        #col.objects.link(ob)
 
     model = r3d.File3dm.Read(filepath)
     for obid in range(len(model.Objects)):
@@ -29,24 +32,36 @@ def read_some_data(context, filepath, import_hidden):
             n = str(og.ObjectType).split(".")[1]+" " + str(attr.Id)
         else:
             n = attr.Name
+        
+        # set up layer name, with layer index -1 keep "Default"
+        # for now read layer index and compose name from that
+        # once rhino3dm.py gives layer name, use that instead.
         layername = "Default"
         if attr.LayerIndex != -1:
             layername = "Layer " + str(attr.LayerIndex)
+        
+        # get collection for given layer name
         if layername in layers:
             layer = layers[layername]
+        # or create a new one
         else:
             layer = bpy.data.collections.new(layername)
             col.children.link(layer)
             layers[layername] = layer
+        # concatenate all meshes from all (brep) faces,
+        # adjust vertex indices for faces accordingly
+        # first get all render meshes
         msh = [og.Faces[f].GetMesh(r3d.MeshType.Any) for f in range(len(og.Faces)) if type(og.Faces[f])!=list]
         fidx=0
         faces = []
         vertices = []
+        # now add all faces and vertices to the main lists
         for m in msh:
             if not m: continue
             faces.extend([list(map(lambda x: x + fidx, m.Faces[f])) for f in range(len(m.Faces))])
             fidx = fidx + len(m.Vertices)
             vertices.extend([(m.Vertices[v].X, m.Vertices[v].Y, m.Vertices[v].Z) for v in range(len(m.Vertices))])
+        # done, now add object to blender
         add_object(n, vertices, faces, layer)
 
     bpy.data.scenes[0].collection.children.link(col)
@@ -94,7 +109,7 @@ class Import3dm(Operator, ImportHelper):
 #    )
 
     def execute(self, context):
-        return read_some_data(context, self.filepath, self.import_hidden)
+        return read_3dm(context, self.filepath, self.import_hidden)
 
 
 # Only needed if you want to add into a dynamic menu
