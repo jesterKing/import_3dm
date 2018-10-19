@@ -87,7 +87,7 @@ class Import3dm(Operator, ImportHelper):
 
 # Only needed if you want to add into a dynamic menu
 def menu_func_import(self, context):
-    self.layout.operator(Import3dm.bl_idname, text="Rhinoceros 3d (.3dm)")
+    self.layout.operator(Import3dm.bl_idname, text="Rhinoceros 3D (.3dm)")
 
 
 def register():
