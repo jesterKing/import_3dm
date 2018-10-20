@@ -1,12 +1,14 @@
+import os.path
 import bpy
 import rhino3dm as r3d
 
 
 def read_3dm(context, filepath, import_hidden):
-    if "Rhino3D" in bpy.data.collections.keys():
-        col = bpy.data.collections["Rhino3D"]
+    top_collection_name = os.path.splitext(os.path.basename(filepath))[0]
+    if top_collection_name in bpy.data.collections.keys():
+        col = bpy.data.collections[top_collection_name]
     else:
-        col = bpy.data.collections.new("Rhino3D")
+        col = bpy.data.collections.new(top_collection_name)
     
     layers = {}
 
