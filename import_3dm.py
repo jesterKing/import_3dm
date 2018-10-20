@@ -34,11 +34,10 @@ def read_3dm(context, filepath, import_hidden):
             n = attr.Name
         
         # set up layer name, with layer index -1 keep "Default"
-        # for now read layer index and compose name from that
-        # once rhino3dm.py gives layer name, use that instead.
+        # otherwise read layer name from layer with LayerIndex
         layername = "Default"
         if attr.LayerIndex != -1:
-            layername = "Layer " + str(attr.LayerIndex)
+            layername = model.Layers[attr.LayerIndex].Name
         
         # get collection for given layer name
         if layername in layers:
