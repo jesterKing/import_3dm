@@ -23,6 +23,26 @@ def read_3dm(context, filepath, import_hidden):
         layer.objects.link(ob)
 
     model = r3d.File3dm.Read(filepath)
+    
+    layerids = {}
+    
+    # build lookup table for LayerTable index
+    # from GUID, create collection for each
+    # layer
+    for lid in range(len(model.Layers)):
+        l = model.Layers[lid]
+        layerids[str(l.Id)] = (lid, bpy.data.collections.new(l.Name))
+    # second pass so we can link layers to each other
+    for lid in range(len(model.Layers)):
+        l = model.Layers[lid]
+        # link up layers to their parent layers
+        if str(l.ParentLayerId) in layerids:
+            parentlayer = layerids[str(l.ParentLayerId)][1]
+            parentlayer.children.link(layerids[str(l.Id)][1])
+        # or to the top collection if no parent layer was found
+        else:
+            col.children.link(layerids[str(l.Id)][1])
+        
     for obid in range(len(model.Objects)):
         og=model.Objects[obid].Geometry
         if og.ObjectType not in [r3d.DocObjects.ObjectType.Brep, r3d.DocObjects.ObjectType.Mesh]: continue
@@ -33,20 +53,13 @@ def read_3dm(context, filepath, import_hidden):
         else:
             n = attr.Name
         
-        # set up layer name, with layer index -1 keep "Default"
-        # otherwise read layer name from layer with LayerIndex
-        layername = "Default"
         if attr.LayerIndex != -1:
-            layername = model.Layers[attr.LayerIndex].Name
-        
-        # get collection for given layer name
-        if layername in layers:
-            layer = layers[layername]
-        # or create a new one
+            layeruuid = model.Layers[attr.LayerIndex].Id
         else:
-            layer = bpy.data.collections.new(layername)
-            col.children.link(layer)
-            layers[layername] = layer
+            layeruuid = model.Layers[0].Id
+
+        layer = layerids[str(layeruuid)][1]
+
         # concatenate all meshes from all (brep) faces,
         # adjust vertex indices for faces accordingly
         # first get all render meshes
