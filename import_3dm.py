@@ -1,7 +1,7 @@
 import os.path
 import bpy
 import rhino3dm as r3d
-
+from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
 
 def read_3dm(context, filepath, import_hidden):
     top_collection_name = os.path.splitext(os.path.basename(filepath))[0]
@@ -12,13 +12,14 @@ def read_3dm(context, filepath, import_hidden):
     
     layers = {}
 
-    def add_object(name, verts, faces, layer):
+    def add_object(name, verts, faces, layer, rhinomat):
         """
         Add a new object with given mesh data, link to
         collection given by layer
         """
         mesh = bpy.data.meshes.new(name=name)
         mesh.from_pydata(verts, [], faces)
+        mesh.materials.append(rhinomat)
         ob = bpy.data.objects.new(name=name, object_data=mesh)
         # Rhino data is all in world space, so add object at 0,0,0
         ob.location = (0.0, 0.0, 0.0)
@@ -27,6 +28,7 @@ def read_3dm(context, filepath, import_hidden):
     model = r3d.File3dm.Read(filepath)
     
     layerids = {}
+    materials = {}
     
     # build lookup table for LayerTable index
     # from GUID, create collection for each
@@ -34,6 +36,14 @@ def read_3dm(context, filepath, import_hidden):
     for lid in range(len(model.Layers)):
         l = model.Layers[lid]
         layerids[str(l.Id)] = (lid, bpy.data.collections.new(l.Name))
+        matname = l.Name + "+" + str(l.Id)
+        if not matname in materials:
+            laymat = bpy.data.materials.new(name=matname)
+            laymat.use_nodes = True
+            r,g,b,a = l.Color
+            principled = PrincipledBSDFWrapper(laymat, is_readonly=False)
+            principled.base_color = (r/255.0, g/255.0, b/255.0)
+            materials[matname] = laymat
     # second pass so we can link layers to each other
     for lid in range(len(model.Layers)):
         l = model.Layers[lid]
@@ -47,7 +57,7 @@ def read_3dm(context, filepath, import_hidden):
         
     for obid in range(len(model.Objects)):
         og=model.Objects[obid].Geometry
-        if og.ObjectType not in [r3d.DocObjects.ObjectType.Brep, r3d.DocObjects.ObjectType.Mesh]: continue
+        if og.ObjectType not in [r3d.DocObjects.ObjectType.Brep, r3d.DocObjects.ObjectType.Mesh, r3d.DocObjects.ObjectType.Extrusion]: continue
         attr = model.Objects[obid].Attributes
         if not attr.Visible: continue
         if attr.Name == "" or attr.Name==None:
@@ -56,16 +66,24 @@ def read_3dm(context, filepath, import_hidden):
             n = attr.Name
         
         if attr.LayerIndex != -1:
-            layeruuid = model.Layers[attr.LayerIndex].Id
+            rhinolayer = model.Layers[attr.LayerIndex]
         else:
-            layeruuid = model.Layers[0].Id
+            rhinolayer = model.Layers[0]
 
+        layeruuid = rhinolayer.Id
+        rhinomatname = rhinolayer.Name + "+" + str(layeruuid)
+        rhinomat = materials[rhinomatname]
         layer = layerids[str(layeruuid)][1]
 
         # concatenate all meshes from all (brep) faces,
         # adjust vertex indices for faces accordingly
         # first get all render meshes
-        msh = [og.Faces[f].GetMesh(r3d.MeshType.Any) for f in range(len(og.Faces)) if type(og.Faces[f])!=list]
+        if og.ObjectType==r3d.DocObjects.ObjectType.Extrusion:
+            msh = [og.GetMesh(r3d.MeshType.Any)]
+        elif og.ObjectType==r3d.DocObjects.ObjectType.Brep:
+            msh = [og.Faces[f].GetMesh(r3d.MeshType.Any) for f in range(len(og.Faces)) if type(og.Faces[f])!=list]
+        else:
+            continue
         fidx=0
         faces = []
         vertices = []
@@ -76,7 +94,7 @@ def read_3dm(context, filepath, import_hidden):
             fidx = fidx + len(m.Vertices)
             vertices.extend([(m.Vertices[v].X, m.Vertices[v].Y, m.Vertices[v].Z) for v in range(len(m.Vertices))])
         # done, now add object to blender
-        add_object(n, vertices, faces, layer)
+        add_object(n, vertices, faces, layer, rhinomat)
 
     bpy.data.scenes[0].collection.children.link(col)
 
