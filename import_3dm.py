@@ -2,6 +2,39 @@ import os.path
 import bpy
 import rhino3dm as r3d
 from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
+    
+def tag_data(idblock, uuid, name):
+    """
+    Given a Blender data idblock tag it with the id an name
+    given using custom properties. These are used to track the
+    relationship with original Rhino data.
+    """
+    idblock['rhid'] = str(uuid)
+    idblock['rhiname'] = name
+    
+def get_iddata(base, uuid, name, obdata):
+    """
+    Get an iddata. If an object with given uuid is found in
+    this .blend use that. Otherwise new up one with base.new,
+    potentially with obdata if that is set
+    """
+    founditem = None
+    for item in base:
+        if item.get('rhid', None) == str(uuid):
+            founditem = item
+            break
+    if founditem:
+        theitem = founditem
+        theitem['rhname'] = name
+        if obdata:
+            theitem.data = obdata
+    else:
+        if obdata:
+            theitem = base.new(name=name, object_data=obdata)
+        else:
+            theitem = base.new(name=name)
+        tag_data(theitem, uuid, name)
+    return theitem
 
 def handle_layers(context, model, toplayer, layerids, materials):
     """
@@ -15,7 +48,9 @@ def handle_layers(context, model, toplayer, layerids, materials):
     # layer
     for lid in range(len(model.Layers)):
         l = model.Layers[lid]
-        layerids[str(l.Id)] = (lid, context.blend_data.collections.new(l.Name))
+        lcol = get_iddata(context.blend_data.collections, l.Id, l.Name, None)
+        layerids[str(l.Id)] = (lid, lcol)
+        tag_data(layerids[str(l.Id)][1], l.Id, l.Name)
         matname = l.Name + "+" + str(l.Id)
         if not matname in materials:
             laymat = context.blend_data.materials.new(name=matname)
@@ -30,13 +65,19 @@ def handle_layers(context, model, toplayer, layerids, materials):
         # link up layers to their parent layers
         if str(l.ParentLayerId) in layerids:
             parentlayer = layerids[str(l.ParentLayerId)][1]
-            parentlayer.children.link(layerids[str(l.Id)][1])
+            try:
+                parentlayer.children.link(layerids[str(l.Id)][1])
+            except Exception:
+                pass
         # or to the top collection if no parent layer was found
         else:
-            toplayer.children.link(layerids[str(l.Id)][1])
+            try:
+                toplayer.children.link(layerids[str(l.Id)][1])
+            except Exception:
+                pass
 
 
-def add_object(context, name, verts, faces, layer, rhinomat):
+def add_object(context, name, origname, id, verts, faces, layer, rhinomat):
     """
     Add a new object with given mesh data, link to
     collection given by layer
@@ -44,17 +85,22 @@ def add_object(context, name, verts, faces, layer, rhinomat):
     mesh = context.blend_data.meshes.new(name=name)
     mesh.from_pydata(verts, [], faces)
     mesh.materials.append(rhinomat)
-    ob = context.blend_data.objects.new(name=name, object_data=mesh)
+    ob = get_iddata(context.blend_data.objects, id, origname, mesh)
+    #ob = context.blend_data.objects.new(name=name, object_data=mesh)
+    #tag_data(ob, id, origname)
     # Rhino data is all in world space, so add object at 0,0,0
     ob.location = (0.0, 0.0, 0.0)
-    layer.objects.link(ob)
+    try:
+        layer.objects.link(ob)
+    except Exception:
+        pass
 
 def read_3dm(context, filepath, import_hidden):
     top_collection_name = os.path.splitext(os.path.basename(filepath))[0]
     if top_collection_name in context.blend_data.collections.keys():
         toplayer = context.blend_data.collections[top_collection_name]
     else:
-        toplayer = context.blend_data.collections.new(top_collection_name)
+        toplayer = context.blend_data.collections.new(name=top_collection_name)
 
     model = r3d.File3dm.Read(filepath)
     
@@ -88,6 +134,8 @@ def read_3dm(context, filepath, import_hidden):
         # first get all render meshes
         if og.ObjectType==r3d.DocObjects.ObjectType.Extrusion:
             msh = [og.GetMesh(r3d.MeshType.Any)]
+        elif og.ObjectType==r3d.DocObjects.ObjectType.Mesh:
+            msh = [og]
         elif og.ObjectType==r3d.DocObjects.ObjectType.Brep:
             msh = [og.Faces[f].GetMesh(r3d.MeshType.Any) for f in range(len(og.Faces)) if type(og.Faces[f])!=list]
         else:
@@ -102,11 +150,14 @@ def read_3dm(context, filepath, import_hidden):
             fidx = fidx + len(m.Vertices)
             vertices.extend([(m.Vertices[v].X, m.Vertices[v].Y, m.Vertices[v].Z) for v in range(len(m.Vertices))])
         # done, now add object to blender
-        add_object(context, n, vertices, faces, layer, rhinomat)
+        add_object(context, n, attr.Name, attr.Id, vertices, faces, layer, rhinomat)
 
     # finally link in the container collection (top layer) into the main
     # scene collection.
-    context.blend_data.scenes[0].collection.children.link(toplayer)
+    try:
+        context.blend_data.scenes[0].collection.children.link(toplayer)
+    except Exception:
+        pass
 
     return {'FINISHED'}
 
