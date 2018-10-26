@@ -22,7 +22,7 @@ def tag_data(idblock, uuid, name):
     relationship with original Rhino data.
     """
     idblock['rhid'] = str(uuid)
-    idblock['rhiname'] = name
+    idblock['rhname'] = name
     
 def get_iddata(base, uuid, name, obdata):
     """
