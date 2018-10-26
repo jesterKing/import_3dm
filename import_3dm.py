@@ -1,3 +1,15 @@
+bl_info = {
+    "name": "Import Rhinoceros 3D",
+    "author": "jesterKing",
+    "version": (0, 0, 1),
+    "blender": (2, 80, 0),
+    "location": "File > Import > Rhinoceros 3D (.3dm)",
+    "description": "This addon lets you import Rhinoceros 3dm files",
+    "warning": "The importer doesn't handle all data in 3dm files yet",
+    "wiki_url": "https://github.com/jesterKing/import_3dm",
+    "category": "Import-Export",
+}
+
 import os.path
 import bpy
 import rhino3dm as r3d
