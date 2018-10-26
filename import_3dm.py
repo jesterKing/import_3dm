@@ -4,7 +4,7 @@ bl_info = {
     "version": (0, 0, 1),
     "blender": (2, 80, 0),
     "location": "File > Import > Rhinoceros 3D (.3dm)",
-    "description": "This Addon lets you import all render meshes from Rhinoceros 3dm files",
+    "description": "This addon lets you import Rhinoceros 3dm files",
     "warning": "",
     "wiki_url": "https://github.com/jesterKing/import_3dm",
     "category": "Import-Export",
