@@ -11,9 +11,77 @@ bl_info = {
 }
 
 import os.path
+import binascii
+import struct
+
 import bpy
 import rhino3dm as r3d
 from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
+
+#### material hashing functions
+
+_black = (0,0,0,255)
+
+
+def Bbytes(b):
+    """
+    Return bytes representation of boolean
+    """
+    return struct.pack("?", b)
+
+def Fbytes(f):
+    """
+    Return bytes representation of float
+    """
+    return struct.pack("f", f)
+
+def Cbytes(c):
+    """
+    Return bytes representation of Color, a 4-tuple containing integers
+    """
+    return struct.pack("IIII", *c)
+
+def tobytes(d):
+    t = type(d)
+    if t is bool:
+        return Bbytes(d)
+    if t is float:
+        return Fbytes(d)
+    if t is tuple and len(d)==4:
+        return Cbytes(d)
+    
+def hash_color(C, crc):
+    """
+    return crc from color C
+    """
+    crc = binascii.crc32(tobytes(C), crc)
+    return crc
+
+def hash_material(M):
+    """
+    Hash a rhino3dm.Material. A CRC32 is calculated using the
+    material name and data that affects render results
+    """
+    crc = 13
+    crc = binascii.crc32(bytes(M.Name, "utf-8"))
+    crc = hash_color(M.DiffuseColor, crc)
+    crc = hash_color(M.EmissionColor, crc)
+    crc = hash_color(M.ReflectionColor, crc)
+    crc = hash_color(M.SpecularColor, crc)
+    crc = hash_color(M.TransparentColor, crc)
+    crc = binascii.crc32(tobytes(M.DisableLighting), crc)
+    crc = binascii.crc32(tobytes(M.FresnelIndexOfRefraction), crc)
+    crc = binascii.crc32(tobytes(M.FresnelReflections), crc)
+    crc = binascii.crc32(tobytes(M.IndexOfRefraction), crc)
+    crc = binascii.crc32(tobytes(M.ReflectionGlossiness), crc)
+    crc = binascii.crc32(tobytes(M.Reflectivity), crc)
+    crc = binascii.crc32(tobytes(M.RefractionGlossiness), crc)
+    crc = binascii.crc32(tobytes(M.Shine), crc)
+    crc = binascii.crc32(tobytes(M.Transparency), crc)
+    return crc
+
+
+##### data tagging
     
 def tag_data(idblock, uuid, name):
     """
@@ -31,10 +99,16 @@ def get_iddata(base, uuid, name, obdata):
     potentially with obdata if that is set
     """
     founditem = None
-    for item in base:
-        if item.get('rhid', None) == str(uuid):
-            founditem = item
-            break
+    if uuid!=None:
+        for item in base:
+            if item.get('rhid', None) == str(uuid):
+                founditem = item
+                break
+    elif name:
+        for item in base:
+            if item.get('rhname', None) == name:
+                founditem = item
+                break
     if founditem:
         theitem = founditem
         theitem['rhname'] = name
@@ -65,7 +139,8 @@ def handle_layers(context, model, toplayer, layerids, materials):
         tag_data(layerids[str(l.Id)][1], l.Id, l.Name)
         matname = l.Name + "+" + str(l.Id)
         if not matname in materials:
-            laymat = context.blend_data.materials.new(name=matname)
+            laymat = get_iddata(context.blend_data.materials, l.Id, l.Name, None)
+            #laymat = context.blend_data.materials.new(name=matname)
             laymat.use_nodes = True
             r,g,b,a = l.Color
             principled = PrincipledBSDFWrapper(laymat, is_readonly=False)
@@ -88,6 +163,48 @@ def handle_layers(context, model, toplayer, layerids, materials):
             except Exception:
                 pass
 
+def material_name(m):
+    h = hash_material(m)
+    return m.Name + "~" + str(h)
+
+def handle_materials(context, model, materials):
+    """
+    """
+    for i in range(len(model.Materials)):
+        m = model.Materials[i]
+        h = hash_material(m)
+        matname = material_name(m)
+        if not matname in materials:
+            blmat = get_iddata(context.blend_data.materials, None, m.Name, None) #context.blend_data.materials.new(name=matname)
+            blmat.use_nodes = True
+            refl = m.Reflectivity
+            transp = m.Transparency
+            ior = m.IndexOfRefraction
+            roughness = m.ReflectionGlossiness
+            transrough = m.RefractionGlossiness
+            spec = m.Shine / 255.0
+            
+            if m.DiffuseColor==_black and m.Reflectivity>0.0 and m.Transparency==0.0:
+                r,g,b,a = m.ReflectionColor
+            elif m.DiffuseColor==_black and m.Reflectivity==0.0 and m.Transparency>0.0:
+                r,g,b,a = m.TransparentColor
+                refl = 0.0
+            elif m.DiffuseColor==_black and m.Reflectivity>0.0 and m.Transparency>0.0:
+                r,g,b,a = m.TransparentColor
+                refl = 0.0
+            else:
+                r,g,b,a = m.DiffuseColor
+                if refl>0.0 and transp>0.0:
+                    refl=0.0
+            principled = PrincipledBSDFWrapper(blmat, is_readonly=False)
+            principled.base_color = (r/255.0, g/255.0, b/255.0)
+            principled.metallic = refl
+            principled.transmission = transp
+            principled.ior = ior
+            principled.roughness = roughness
+            principled.specular = spec
+            principled.node_principled_bsdf.inputs[16].default_value = transrough
+            materials[matname] = blmat
 
 def add_object(context, name, origname, id, verts, faces, layer, rhinomat):
     """
@@ -119,11 +236,12 @@ def read_3dm(context, filepath, import_hidden):
     layerids = {}
     materials = {}
     
+    handle_materials(context, model, materials)
     handle_layers(context, model, toplayer, layerids, materials)
         
     for obid in range(len(model.Objects)):
         og=model.Objects[obid].Geometry
-        if og.ObjectType not in [r3d.DocObjects.ObjectType.Brep, r3d.DocObjects.ObjectType.Mesh, r3d.DocObjects.ObjectType.Extrusion]: continue
+        if og.ObjectType not in [r3d.ObjectType.Brep, r3d.ObjectType.Mesh, r3d.ObjectType.Extrusion]: continue
         attr = model.Objects[obid].Attributes
         if not attr.Visible: continue
         if attr.Name == "" or attr.Name==None:
@@ -135,20 +253,27 @@ def read_3dm(context, filepath, import_hidden):
             rhinolayer = model.Layers[attr.LayerIndex]
         else:
             rhinolayer = model.Layers[0]
+        
+        matname = None
+        if attr.MaterialIndex != -1:
+            matname = material_name(model.Materials[attr.MaterialIndex])
 
         layeruuid = rhinolayer.Id
         rhinomatname = rhinolayer.Name + "+" + str(layeruuid)
-        rhinomat = materials[rhinomatname]
+        if matname:
+            rhinomat = materials[matname]
+        else:
+            rhinomat = materials[rhinomatname]
         layer = layerids[str(layeruuid)][1]
 
         # concatenate all meshes from all (brep) faces,
         # adjust vertex indices for faces accordingly
         # first get all render meshes
-        if og.ObjectType==r3d.DocObjects.ObjectType.Extrusion:
+        if og.ObjectType==r3d.ObjectType.Extrusion:
             msh = [og.GetMesh(r3d.MeshType.Any)]
-        elif og.ObjectType==r3d.DocObjects.ObjectType.Mesh:
+        elif og.ObjectType==r3d.ObjectType.Mesh:
             msh = [og]
-        elif og.ObjectType==r3d.DocObjects.ObjectType.Brep:
+        elif og.ObjectType==r3d.ObjectType.Brep:
             msh = [og.Faces[f].GetMesh(r3d.MeshType.Any) for f in range(len(og.Faces)) if type(og.Faces[f])!=list]
         else:
             continue
