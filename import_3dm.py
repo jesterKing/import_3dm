@@ -293,9 +293,7 @@ def read_3dm(context, filepath, import_hidden):
     # scene collection.
     try:
         context.blend_data.scenes[0].collection.children.link(toplayer)
-        for rhob in toplayer.all_objects: rhob.select_set(action='SELECT')
-        bpy.ops.object.shade_smooth()
-        for rhob in toplayer.all_objects: rhob.select_set(action='DESELECT')
+        bpy.ops.object.shade_smooth({'selected_editable_objects': toplayer.all_objects})
     except Exception:
         pass
 
