@@ -132,8 +132,7 @@ def handle_layers(context, model, toplayer, layerids, materials):
     # build lookup table for LayerTable index
     # from GUID, create collection for each
     # layer
-    for lid in range(len(model.Layers)):
-        l = model.Layers[lid]
+    for lid, l in enumerate(model.Layers): # in range(len(model.Layers)):
         lcol = get_iddata(context.blend_data.collections, l.Id, l.Name, None)
         layerids[str(l.Id)] = (lid, lcol)
         tag_data(layerids[str(l.Id)][1], l.Id, l.Name)
@@ -147,8 +146,8 @@ def handle_layers(context, model, toplayer, layerids, materials):
             principled.base_color = (r/255.0, g/255.0, b/255.0)
             materials[matname] = laymat
     # second pass so we can link layers to each other
-    for lid in range(len(model.Layers)):
-        l = model.Layers[lid]
+    for l in model.Layers: #id in range(len(model.Layers)):
+        #l = model.Layers[lid]
         # link up layers to their parent layers
         if str(l.ParentLayerId) in layerids:
             parentlayer = layerids[str(l.ParentLayerId)][1]
@@ -170,8 +169,7 @@ def material_name(m):
 def handle_materials(context, model, materials):
     """
     """
-    for i in range(len(model.Materials)):
-        m = model.Materials[i]
+    for m in model.Materials:
         h = hash_material(m)
         matname = material_name(m)
         if not matname in materials:
@@ -239,10 +237,10 @@ def read_3dm(context, filepath, import_hidden):
     handle_materials(context, model, materials)
     handle_layers(context, model, toplayer, layerids, materials)
         
-    for obid in range(len(model.Objects)):
-        og=model.Objects[obid].Geometry
+    for ob in model.Objects:
+        og=ob.Geometry
         if og.ObjectType not in [r3d.ObjectType.Brep, r3d.ObjectType.Mesh, r3d.ObjectType.Extrusion]: continue
-        attr = model.Objects[obid].Attributes
+        attr = ob.Attributes
         if not attr.Visible: continue
         if attr.Name == "" or attr.Name==None:
             n = str(og.ObjectType).split(".")[1]+" " + str(attr.Id)
