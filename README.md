@@ -19,15 +19,15 @@ Installation on Windows
 =======================
 
 
-* Install Python 3.7.1 (64-bit) 4, have the installer add Python 3.7 to your PATH as well. Make sure pip gets installed (using the defaults from the first button, together with the checkbox for adding to PATH should get that set up).
+* Install [Python 3.7.1 (64-bit)](https://www.python.org/ftp/python/3.7.1/python-3.7.1-amd64.exe), have the installer add Python 3.7 to your PATH as well. Make sure pip gets installed (using the defaults from the first button, together with the checkbox for adding to PATH should get that set up).
 * Open a cmd.exe (start > run > cmd.exe)
-* install rhino3dm.py using: pip3.7 install --user rhino3dm
-* Save the file https://raw.githubusercontent.com/jesterKing/import_3dm/master/import_3dm.py 4 to a place you can easily remember (desktop or downloads is fine)
+* install `rhino3dm.py` by typing in the command prompt: `pip3.7 install --user rhino3dm`
+* Save the file https://raw.githubusercontent.com/jesterKing/import_3dm/master/import_3dm.py to a place you can easily remember (desktop or downloads is fine)
 * Start Blender 2.80
 * In top menu press Edit > User Preferences...
 * Select the section Add-ons
 * In the bottom of that window select Install add-on from file...
-* Browse to where you saved import_3dm.py, select it and press the Install add.-on from file button in the top right of the file browser
+* Browse to where you saved import_3dm.py, select it and press the Install add-on from file button in the top right of the file browser
 * Done. Probably a good idea to restart Blender.
 
 If you just now downloaded Blender 2.80 you can either use the operator search menu by pressing F3, or through File > Import.
