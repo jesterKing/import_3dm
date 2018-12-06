@@ -15,7 +15,7 @@ from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
 import rhino3dm as r3d
 from .utils import *
 
-def handle_layers(context, model, toplayer, layerids, materials,import_hidden_layers):
+def handle_layers(context, model, toplayer, layerids, materials,import_hidden_layers, override_material):
     """
     In context read the Rhino layers from model
     then update the layerids dictionary passed in.
@@ -33,12 +33,14 @@ def handle_layers(context, model, toplayer, layerids, materials,import_hidden_la
         matname = l.Name + "+" + str(l.Id)
         if not matname in materials:
             laymat = get_iddata(context.blend_data.materials, l.Id, l.Name, None)
-            #laymat = context.blend_data.materials.new(name=matname)
-            laymat.use_nodes = True
-            r,g,b,a = l.Color
-            principled = PrincipledBSDFWrapper(laymat, is_readonly=False)
-            principled.base_color = (r/255.0, g/255.0, b/255.0)
-            materials[matname] = laymat
+            if laymat['state'] == "Existing" and not override_material:
+                materials[matname] = laymat
+            else: 
+                laymat.use_nodes = True
+                r,g,b,a = l.Color
+                principled = PrincipledBSDFWrapper(laymat, is_readonly=False)
+                principled.base_color = (r/255.0, g/255.0, b/255.0)
+                materials[matname] = laymat
     # second pass so we can link layers to each other
     for l in model.Layers: #id in range(len(model.Layers)):
         if not l.Visible and not import_hidden_layers: continue

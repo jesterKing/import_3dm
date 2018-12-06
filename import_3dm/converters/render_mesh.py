@@ -11,10 +11,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import uuid
+
 import rhino3dm as r3d
 from .utils import *
 
-def add_object(context, name, origname, id, verts, faces, layer, rhinomat):
+def add_object(context, name, origname, id, verts, faces, layer, rhinomat, update_existing_geometry):
     """
     Add a new object with given mesh data, link to
     collection given by layer
@@ -22,9 +24,11 @@ def add_object(context, name, origname, id, verts, faces, layer, rhinomat):
     mesh = context.blend_data.meshes.new(name=name)
     mesh.from_pydata(verts, [], faces)
     mesh.materials.append(rhinomat)
-    ob = get_iddata(context.blend_data.objects, id, origname, mesh)
-    #ob = context.blend_data.objects.new(name=name, object_data=mesh)
-    #tag_data(ob, id, origname)
+    if update_existing_geometry:
+    # Rhino data is all in world space, so add object at 0,0,0
+        ob = get_iddata(context.blend_data.objects, id, origname, mesh)
+    else:
+        ob = get_iddata(context.blend_data.objects, uuid.uuid4(), origname, mesh)
     # Rhino data is all in world space, so add object at 0,0,0
     ob.location = (0.0, 0.0, 0.0)
     try:
@@ -32,7 +36,7 @@ def add_object(context, name, origname, id, verts, faces, layer, rhinomat):
     except Exception:
         pass
     
-def import_render_mesh(og,context, n, Name, Id, layer, rhinomat):
+def import_render_mesh(og,context, n, Name, Id, layer, rhinomat, update_existing_geometry):
     # concatenate all meshes from all (brep) faces,
     # adjust vertex indices for faces accordingly
     # first get all render meshes
@@ -52,4 +56,4 @@ def import_render_mesh(og,context, n, Name, Id, layer, rhinomat):
         fidx = fidx + len(m.Vertices)
         vertices.extend([(m.Vertices[v].X, m.Vertices[v].Y, m.Vertices[v].Z) for v in range(len(m.Vertices))])
     # done, now add object to blender
-    add_object(context, n, Name, Id, vertices, faces, layer, rhinomat)
+    add_object(context, n, Name, Id, vertices, faces, layer, rhinomat , update_existing_geometry)

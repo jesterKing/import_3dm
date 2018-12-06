@@ -13,10 +13,9 @@
 import os.path
 import bpy
 import rhino3dm as r3d
-##import rhino3dm as r3d
 from .converters import *
 
-def read_3dm(context, filepath, import_hidden, import_hidden_layers):
+def read_3dm(context, filepath, update_existing_geometry, import_hidden, import_hidden_layers, override_material):
     
     
     top_collection_name = os.path.splitext(os.path.basename(filepath))[0]
@@ -29,15 +28,16 @@ def read_3dm(context, filepath, import_hidden, import_hidden_layers):
     
     layerids = {}
     materials = {}
+   
     
-    handle_materials(context, model, materials)
-    handle_layers(context, model, toplayer, layerids, materials,import_hidden_layers)
+    handle_materials(context, model, materials, override_material)
+
+    handle_layers(context, model, toplayer, layerids, materials, import_hidden_layers, override_material)
         
     for ob in model.Objects:
         og=ob.Geometry
         if og.ObjectType not in RHINO_TYPE_TO_IMPORT: continue
         exporter = RHINO_TYPE_TO_IMPORT[og.ObjectType]
-        
         attr = ob.Attributes
         if not import_hidden and not attr.Visible: continue    
         if attr.Name == "" or attr.Name==None:
@@ -53,7 +53,7 @@ def read_3dm(context, filepath, import_hidden, import_hidden_layers):
         matname = None
         if attr.MaterialIndex != -1:
             matname = material_name(model.Materials[attr.MaterialIndex])
-
+    
         layeruuid = rhinolayer.Id
         rhinomatname = rhinolayer.Name + "+" + str(layeruuid)
         if matname:
@@ -62,7 +62,7 @@ def read_3dm(context, filepath, import_hidden, import_hidden_layers):
             rhinomat = materials[rhinomatname]
         layer = layerids[str(layeruuid)][1]
 
-        exporter(og, context, n, attr.Name, attr.Id, layer, rhinomat)
+        exporter(og, context, n, attr.Name, attr.Id, layer, rhinomat, update_existing_geometry)
 
        
     # finally link in the container collection (top layer) into the main

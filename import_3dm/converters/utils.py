@@ -20,6 +20,7 @@ def tag_data(idblock, uuid, name):
     """
     idblock['rhid'] = str(uuid)
     idblock['rhname'] = name
+    idblock['state'] = "New"
     
 def get_iddata(base, uuid, name, obdata):
     """
@@ -43,6 +44,7 @@ def get_iddata(base, uuid, name, obdata):
         theitem['rhname'] = name
         if obdata:
             theitem.data = obdata
+        theitem['state'] = "Existing"
     else:
         if obdata:
             theitem = base.new(name=name, object_data=obdata)

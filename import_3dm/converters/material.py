@@ -84,40 +84,43 @@ def material_name(m):
     h = hash_material(m)
     return m.Name + "~" + str(h)
 
-def handle_materials(context, model, materials):
+def handle_materials(context, model, materials,override_material):
     """
     """
     for m in model.Materials:
-        h = hash_material(m)
         matname = material_name(m)
         if not matname in materials:
             blmat = get_iddata(context.blend_data.materials, None, m.Name, None) #context.blend_data.materials.new(name=matname)
-            blmat.use_nodes = True
-            refl = m.Reflectivity
-            transp = m.Transparency
-            ior = m.IndexOfRefraction
-            roughness = m.ReflectionGlossiness
-            transrough = m.RefractionGlossiness
-            spec = m.Shine / 255.0
-            
-            if m.DiffuseColor==_black and m.Reflectivity>0.0 and m.Transparency==0.0:
-                r,g,b,a = m.ReflectionColor
-            elif m.DiffuseColor==_black and m.Reflectivity==0.0 and m.Transparency>0.0:
-                r,g,b,a = m.TransparentColor
-                refl = 0.0
-            elif m.DiffuseColor==_black and m.Reflectivity>0.0 and m.Transparency>0.0:
-                r,g,b,a = m.TransparentColor
-                refl = 0.0
-            else:
-                r,g,b,a = m.DiffuseColor
-                if refl>0.0 and transp>0.0:
-                    refl=0.0
-            principled = PrincipledBSDFWrapper(blmat, is_readonly=False)
-            principled.base_color = (r/255.0, g/255.0, b/255.0)
-            principled.metallic = refl
-            principled.transmission = transp
-            principled.ior = ior
-            principled.roughness = roughness
-            principled.specular = spec
-            principled.node_principled_bsdf.inputs[16].default_value = transrough
-            materials[matname] = blmat
+           
+            if blmat['state'] == "Existing" and not override_material:
+                materials[matname] = blmat
+            else:  
+                blmat.use_nodes = True
+                refl = m.Reflectivity
+                transp = m.Transparency
+                ior = m.IndexOfRefraction
+                roughness = m.ReflectionGlossiness
+                transrough = m.RefractionGlossiness
+                spec = m.Shine / 255.0
+                
+                if m.DiffuseColor==_black and m.Reflectivity>0.0 and m.Transparency==0.0:
+                    r,g,b,a = m.ReflectionColor
+                elif m.DiffuseColor==_black and m.Reflectivity==0.0 and m.Transparency>0.0:
+                    r,g,b,a = m.TransparentColor
+                    refl = 0.0
+                elif m.DiffuseColor==_black and m.Reflectivity>0.0 and m.Transparency>0.0:
+                    r,g,b,a = m.TransparentColor
+                    refl = 0.0
+                else:
+                    r,g,b,a = m.DiffuseColor
+                    if refl>0.0 and transp>0.0:
+                        refl=0.0
+                principled = PrincipledBSDFWrapper(blmat, is_readonly=False)
+                principled.base_color = (r/255.0, g/255.0, b/255.0)
+                principled.metallic = refl
+                principled.transmission = transp
+                principled.ior = ior
+                principled.roughness = roughness
+                principled.specular = spec
+                principled.node_principled_bsdf.inputs[16].default_value = transrough
+                materials[matname] = blmat

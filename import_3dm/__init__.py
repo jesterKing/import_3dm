@@ -47,16 +47,28 @@ class Import3dm(Operator, ImportHelper):
 
     # List of operator properties, the attributes will be assigned
     # to the class instance from the operator settings before calling.
+    update_existing_geometry: BoolProperty(
+        name="Update Existing Geometry",
+        description="pdate Existing Geometry",
+        default= True,
+    )
+
     import_hidden: BoolProperty(
         name="Import Hidden Geometry",
         description="Import Hidden Geometry",
-        default=True,
+        default=False,
     )
 
     import_hidden_layers: BoolProperty(
         name="Import Hidden Layers",
         description="Import Hidden Layers",
         default=True,
+    )
+
+    override_material: BoolProperty(
+        name = "Override Existing Blender Material",
+        description= "Will allow for overriding any existing Blender materials with the same name and on the same layer",
+        default=False,
     )
 
 #    type: EnumProperty(
@@ -70,7 +82,7 @@ class Import3dm(Operator, ImportHelper):
 #    )
 
     def execute(self, context):
-        return read_3dm(context, self.filepath, self.import_hidden,self.import_hidden_layers)
+        return read_3dm(context, self.filepath, self.update_existing_geometry, self.import_hidden,self.import_hidden_layers,self.override_material)
 
 
 # Only needed if you want to add into a dynamic menu
