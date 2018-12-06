@@ -31,6 +31,11 @@ import bpy
 import rhino3dm as r3d
 from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
 
+#### curent blender settings
+##_BUnits = bpy.context.scene.unit_settings.length_unit
+
+### current Rhino File Settings
+
 #### material hashing functions
 
 _black = (0,0,0,255)
@@ -235,7 +240,7 @@ def add_object(context, name, origname, id, verts, faces, layer, rhinomat):
     except Exception:
         pass
 
-def read_3dm(context, filepath, import_hidden):
+def read_3dm(context, filepath, import_hidden, import_hidden_Layer):
     top_collection_name = os.path.splitext(os.path.basename(filepath))[0]
     if top_collection_name in context.blend_data.collections.keys():
         toplayer = context.blend_data.collections[top_collection_name]
@@ -244,6 +249,7 @@ def read_3dm(context, filepath, import_hidden):
 
     model = r3d.File3dm.Read(filepath)
     
+
     layerids = {}
     materials = {}
     
@@ -254,7 +260,7 @@ def read_3dm(context, filepath, import_hidden):
         og=ob.Geometry
         if og.ObjectType not in [r3d.ObjectType.Brep, r3d.ObjectType.Mesh, r3d.ObjectType.Extrusion]: continue
         attr = ob.Attributes
-        if not attr.Visible: continue
+        if not import_hidden and not attr.Visible: continue    
         if attr.Name == "" or attr.Name==None:
             n = str(og.ObjectType).split(".")[1]+" " + str(attr.Id)
         else:
@@ -339,7 +345,7 @@ class Import3dm(Operator, ImportHelper):
         description="Import Hidden Geometry",
         default=True,
     )
-
+    
 #    type: EnumProperty(
 #        name="Example Enum",
 #        description="Choose between two items",
@@ -351,7 +357,7 @@ class Import3dm(Operator, ImportHelper):
 #    )
 
     def execute(self, context):
-        return read_3dm(context, self.filepath, self.import_hidden)
+        return read_3dm(context, self.filepath, self.import_hidden, self.import_hidden_Layer)
 
 
 # Only needed if you want to add into a dynamic menu
