@@ -16,7 +16,9 @@ import rhino3dm as r3d
 ##import rhino3dm as r3d
 from .converters import *
 
-def read_3dm(context, filepath, import_hidden):
+def read_3dm(context, filepath, import_hidden, import_hidden_layers):
+    
+    
     top_collection_name = os.path.splitext(os.path.basename(filepath))[0]
     if top_collection_name in context.blend_data.collections.keys():
         toplayer = context.blend_data.collections[top_collection_name]
@@ -24,16 +26,17 @@ def read_3dm(context, filepath, import_hidden):
         toplayer = context.blend_data.collections.new(name=top_collection_name)
 
     model = r3d.File3dm.Read(filepath)
+    
     layerids = {}
     materials = {}
     
     handle_materials(context, model, materials)
-    handle_layers(context, model, toplayer, layerids, materials)
+    handle_layers(context, model, toplayer, layerids, materials,import_hidden_layers)
         
     for ob in model.Objects:
         og=ob.Geometry
-        if og.ObjectType not in Rhino_TYPE_TO_IMPORT: continue
-        exporter = Rhino_TYPE_TO_IMPORT[og.ObjectType]
+        if og.ObjectType not in RHINO_TYPE_TO_IMPORT: continue
+        exporter = RHINO_TYPE_TO_IMPORT[og.ObjectType]
         
         attr = ob.Attributes
         if not import_hidden and not attr.Visible: continue    

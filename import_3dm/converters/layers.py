@@ -15,8 +15,7 @@ from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
 import rhino3dm as r3d
 from .utils import *
 
-
-def handle_layers(context, model, toplayer, layerids, materials):
+def handle_layers(context, model, toplayer, layerids, materials,import_hidden_layers):
     """
     In context read the Rhino layers from model
     then update the layerids dictionary passed in.
@@ -27,6 +26,7 @@ def handle_layers(context, model, toplayer, layerids, materials):
     # from GUID, create collection for each
     # layer
     for lid, l in enumerate(model.Layers): # in range(len(model.Layers)):
+        if not l.Visible and not import_hidden_layers: continue
         lcol = get_iddata(context.blend_data.collections, l.Id, l.Name, None)
         layerids[str(l.Id)] = (lid, lcol)
         tag_data(layerids[str(l.Id)][1], l.Id, l.Name)
@@ -41,7 +41,7 @@ def handle_layers(context, model, toplayer, layerids, materials):
             materials[matname] = laymat
     # second pass so we can link layers to each other
     for l in model.Layers: #id in range(len(model.Layers)):
-        #l = model.Layers[lid]
+        if not l.Visible and not import_hidden_layers: continue
         # link up layers to their parent layers
         if str(l.ParentLayerId) in layerids:
             parentlayer = layerids[str(l.ParentLayerId)][1]

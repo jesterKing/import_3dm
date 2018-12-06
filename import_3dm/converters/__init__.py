@@ -18,7 +18,7 @@ from .layers import *
 from .render_mesh import import_render_mesh
 from .curve import import_curve
 
-Rhino_TYPE_TO_IMPORT = {
+RHINO_TYPE_TO_IMPORT = {
     r3d.ObjectType.Brep : import_render_mesh,
     r3d.ObjectType.Extrusion : import_render_mesh,
     r3d.ObjectType.Mesh : import_render_mesh,

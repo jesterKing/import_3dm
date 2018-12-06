@@ -50,7 +50,13 @@ class Import3dm(Operator, ImportHelper):
     import_hidden: BoolProperty(
         name="Import Hidden Geometry",
         description="Import Hidden Geometry",
-        default=False,
+        default=True,
+    )
+
+    import_hidden_layers: BoolProperty(
+        name="Import Hidden Layers",
+        description="Import Hidden Layers",
+        default=True,
     )
 
 #    type: EnumProperty(
@@ -64,7 +70,7 @@ class Import3dm(Operator, ImportHelper):
 #    )
 
     def execute(self, context):
-        return read_3dm(context, self.filepath, self.import_hidden,)
+        return read_3dm(context, self.filepath, self.import_hidden,self.import_hidden_layers)
 
 
 # Only needed if you want to add into a dynamic menu
