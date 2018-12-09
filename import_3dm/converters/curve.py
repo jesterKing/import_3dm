@@ -14,5 +14,22 @@
 import rhino3dm as r3d
 from .utils import *
 
-def import_curve():
-    pass
+def import_curve(og,context, n, Name, Id, layer, rhinomat, update_existing_geometry):
+  
+     
+    crv = None
+    if og.IsArc():
+      crv = og.TryGetArc()      
+    elif og.IsCircle():
+      crv =  og.TryGetCircle()
+    elif og.IsEllipse():
+       crv = og.TryGetEllipse()
+    elif og.IsPolyline():
+       crv = og.TryGetPolyline()  
+    else:
+       crv = og.ToNurbsCurve()
+    
+    if crv:
+       pass
+    else:
+        pass

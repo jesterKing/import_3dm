@@ -31,6 +31,26 @@ from bpy.props import StringProperty, BoolProperty, EnumProperty
 from bpy.types import Operator
 from .read3dm import read_3dm
 
+class UnitMissMatch(Operator):
+    """ Popup Menu to handle unit miss matches between Blender/Rhino """
+    bl_idname = " "
+    bl_lable = " "
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+    def draw(self, context):
+        layout = self.layout
+        col = layout.column()
+        col.prop(self, "uvtex", expand=True)
+
+    def execute(self, context):
+        self.report({'INFO'}, self.uvtex)
+        return {'FINISHED'}
+
+    
+
+
 class Import3dm(Operator, ImportHelper):
     """Import Rhinoceros 3D files (.3dm). Currently does render meshes only, more geometry and data to follow soon."""
     bl_idname = "import_3dm.some_data"  # important since its how bpy.ops.import_3dm.some_data is constructed
