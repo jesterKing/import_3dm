@@ -27,7 +27,7 @@ import struct
 import bpy
 import rhino3dm as r3d
 from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
-from .utils import *
+from . import utils
 
 #### material hashing functions
 
@@ -102,7 +102,7 @@ def handle_materials(context, model, materials):
         h = hash_material(m)
         matname = material_name(m)
         if not matname in materials:
-            blmat = get_iddata(context.blend_data.materials, None, m.Name, None) #context.blend_data.materials.new(name=matname)
+            blmat = utils.get_iddata(context.blend_data.materials, None, m.Name, None) #context.blend_data.materials.new(name=matname)
             blmat.use_nodes = True
             refl = m.Reflectivity
             transp = m.Transparency

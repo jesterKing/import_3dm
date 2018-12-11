@@ -25,7 +25,7 @@ SOFTWARE.
 import uuid
 
 import rhino3dm as r3d
-from .utils import *
+from . import utils
 
 def add_object(context, name, origname, id, verts, faces, layer, rhinomat):
     """
@@ -35,7 +35,7 @@ def add_object(context, name, origname, id, verts, faces, layer, rhinomat):
     mesh = context.blend_data.meshes.new(name=name)
     mesh.from_pydata(verts, [], faces)
     mesh.materials.append(rhinomat)
-    ob = get_iddata(context.blend_data.objects, id, origname, mesh)
+    ob = utils.get_iddata(context.blend_data.objects, id, origname, mesh)
     #ob = context.blend_data.objects.new(name=name, object_data=mesh)
     #tag_data(ob, id, origname)
     # Rhino data is all in world space, so add object at 0,0,0

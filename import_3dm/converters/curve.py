@@ -23,7 +23,7 @@ SOFTWARE.
 '''
 
 import rhino3dm as r3d
-from .utils import *
+from  . import utils
 
 def import_curve(og,context, n, Name, Id, layer, rhinomat):
    pass

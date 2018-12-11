@@ -24,7 +24,7 @@ SOFTWARE.
 
 from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
 import rhino3dm as r3d
-from .utils import *
+from . import utils
 
 def handle_layers(context, model, toplayer, layerids, materials):
     """
@@ -37,12 +37,12 @@ def handle_layers(context, model, toplayer, layerids, materials):
     # from GUID, create collection for each
     # layer
     for lid, l in enumerate(model.Layers): # in range(len(model.Layers)):
-        lcol = get_iddata(context.blend_data.collections, l.Id, l.Name, None)
+        lcol = utils.get_iddata(context.blend_data.collections, l.Id, l.Name, None)
         layerids[str(l.Id)] = (lid, lcol)
-        tag_data(layerids[str(l.Id)][1], l.Id, l.Name)
+        utils.tag_data(layerids[str(l.Id)][1], l.Id, l.Name)
         matname = l.Name + "+" + str(l.Id)
         if not matname in materials:
-            laymat = get_iddata(context.blend_data.materials, l.Id, l.Name, None)
+            laymat = utils.get_iddata(context.blend_data.materials, l.Id, l.Name, None)
             #laymat = context.blend_data.materials.new(name=matname)
             laymat.use_nodes = True
             r,g,b,a = l.Color
