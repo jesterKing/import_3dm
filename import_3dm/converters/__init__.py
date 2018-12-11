@@ -1,4 +1,4 @@
-""" MIT License
+'''MIT License
 
 Copyright (c) 2018 Nathan Letwory , Joel Putnam
 
@@ -18,18 +18,19 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE. """
+SOFTWARE.'''
 
 import rhino3dm as r3d
 
-from .material import *
-from .layers import *
+from .material import handle_materials, material_name
+from .layers import handle_layers
 from .render_mesh import import_render_mesh
 from .curve import import_curve
 
 '''
 Dictionary mapping between the Rhino file types and importer functions
 '''
+
 RHINO_TYPE_TO_IMPORT = {
     r3d.ObjectType.Brep : import_render_mesh,
     r3d.ObjectType.Extrusion : import_render_mesh,

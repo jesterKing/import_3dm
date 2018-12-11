@@ -1,4 +1,4 @@
-""" MIT License
+'''MIT License
 
 Copyright (c) 2018 Nathan Letwory , Joel Putnam
 
@@ -18,12 +18,12 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE. """
+SOFTWARE. '''
 
 import os.path
 import bpy
 import rhino3dm as r3d
-from .converters import *
+from . import converters 
 
 def read_3dm(context, filepath, import_hidden):
     
@@ -38,14 +38,14 @@ def read_3dm(context, filepath, import_hidden):
     layerids = {}
     materials = {}
 
-    handle_materials(context, model, materials)
+    converters.handle_materials(context, model, materials)
 
-    handle_layers(context, model, toplayer, layerids, materials )
+    converters.handle_layers(context, model, toplayer, layerids, materials )
         
     for ob in model.Objects:
         og=ob.Geometry
-        if og.ObjectType not in RHINO_TYPE_TO_IMPORT: continue
-        exporter = RHINO_TYPE_TO_IMPORT[og.ObjectType]
+        if og.ObjectType not in converters.RHINO_TYPE_TO_IMPORT: continue
+        convert_rhino_object = converters.RHINO_TYPE_TO_IMPORT[og.ObjectType]
         attr = ob.Attributes
         if not attr.Visible: continue    
         if attr.Name == "" or attr.Name==None:
@@ -60,7 +60,7 @@ def read_3dm(context, filepath, import_hidden):
         
         matname = None
         if attr.MaterialIndex != -1:
-            matname = material_name(model.Materials[attr.MaterialIndex])
+            matname = converters.material_name(model.Materials[attr.MaterialIndex])
     
         layeruuid = rhinolayer.Id
         rhinomatname = rhinolayer.Name + "+" + str(layeruuid)
@@ -70,7 +70,7 @@ def read_3dm(context, filepath, import_hidden):
             rhinomat = materials[rhinomatname]
         layer = layerids[str(layeruuid)][1]
 
-        exporter(og, context, n, attr.Name, attr.Id, layer, rhinomat)
+        convert_rhino_object(og, context, n, attr.Name, attr.Id, layer, rhinomat)
  
     # finally link in the container collection (top layer) into the main
     # scene collection.
