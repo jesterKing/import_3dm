@@ -43,7 +43,7 @@ def handle_layers(context, model, toplayer, layerids, materials):
         if matname not in materials:
             laymat = utils.get_iddata(context.blend_data.materials, l.Id, l.Name, None)
             laymat.use_nodes = True
-            r, g, b, a = l.Color
+            r, g, b, _ = l.Color
             principled = PrincipledBSDFWrapper(laymat, is_readonly=False)
             principled.base_color = (r/255.0, g/255.0, b/255.0)
             materials[matname] = laymat
