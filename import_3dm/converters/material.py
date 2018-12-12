@@ -29,7 +29,7 @@ from . import utils
 
 #### material hashing functions
 
-_black = (0,0,0,255)
+_black = (0, 0, 0, 255)
 
 
 def Bbytes(b):
@@ -38,11 +38,13 @@ def Bbytes(b):
     """
     return struct.pack("?", b)
 
+
 def Fbytes(f):
     """
     Return bytes representation of float
     """
     return struct.pack("f", f)
+
 
 def Cbytes(c):
     """
@@ -50,21 +52,24 @@ def Cbytes(c):
     """
     return struct.pack("IIII", *c)
 
+
 def tobytes(d):
     t = type(d)
     if t is bool:
         return Bbytes(d)
     if t is float:
         return Fbytes(d)
-    if t is tuple and len(d)==4:
+    if t is tuple and len(d) == 4:
         return Cbytes(d)
-    
+
+
 def hash_color(C, crc):
     """
     return crc from color C
     """
     crc = binascii.crc32(tobytes(C), crc)
     return crc
+
 
 def hash_material(M):
     """
@@ -89,18 +94,19 @@ def hash_material(M):
     crc = binascii.crc32(tobytes(M.Transparency), crc)
     return crc
 
+
 def material_name(m):
     h = hash_material(m)
     return m.Name + "~" + str(h)
+
 
 def handle_materials(context, model, materials):
     """
     """
     for m in model.Materials:
-        h = hash_material(m)
         matname = material_name(m)
-        if not matname in materials:
-            blmat = utils.get_iddata(context.blend_data.materials, None, m.Name, None) #context.blend_data.materials.new(name=matname)
+        if matname not in materials:
+            blmat = utils.get_iddata(context.blend_data.materials, None, m.Name, None)
             blmat.use_nodes = True
             refl = m.Reflectivity
             transp = m.Transparency
@@ -109,18 +115,18 @@ def handle_materials(context, model, materials):
             transrough = m.RefractionGlossiness
             spec = m.Shine / 255.0
             
-            if m.DiffuseColor==_black and m.Reflectivity>0.0 and m.Transparency==0.0:
-                r,g,b,a = m.ReflectionColor
-            elif m.DiffuseColor==_black and m.Reflectivity==0.0 and m.Transparency>0.0:
-                r,g,b,a = m.TransparentColor
+            if m.DiffuseColor == _black and m.Reflectivity > 0.0 and m.Transparency == 0.0:
+                r, g, b, _ = m.ReflectionColor
+            elif m.DiffuseColor == _black and m.Reflectivity == 0.0 and m.Transparency > 0.0:
+                r, g, b, _ = m.TransparentColor
                 refl = 0.0
-            elif m.DiffuseColor==_black and m.Reflectivity>0.0 and m.Transparency>0.0:
-                r,g,b,a = m.TransparentColor
+            elif m.DiffuseColor == _black and m.Reflectivity > 0.0 and m.Transparency > 0.0:
+                r, g, b, _ = m.TransparentColor
                 refl = 0.0
             else:
-                r,g,b,a = m.DiffuseColor
-                if refl>0.0 and transp>0.0:
-                    refl=0.0
+                r, g, b, a = m.DiffuseColor
+                if refl > 0.0 and transp > 0.0:
+                    refl = 0.0
             principled = PrincipledBSDFWrapper(blmat, is_readonly=False)
             principled.base_color = (r/255.0, g/255.0, b/255.0)
             principled.metallic = refl

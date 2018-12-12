@@ -20,10 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import uuid
-
 import rhino3dm as r3d
 from . import utils
+
 
 def add_object(context, name, origname, id, verts, faces, layer, rhinomat):
     """
@@ -34,31 +33,31 @@ def add_object(context, name, origname, id, verts, faces, layer, rhinomat):
     mesh.from_pydata(verts, [], faces)
     mesh.materials.append(rhinomat)
     ob = utils.get_iddata(context.blend_data.objects, id, origname, mesh)
-    #ob = context.blend_data.objects.new(name=name, object_data=mesh)
-    #tag_data(ob, id, origname)
     # Rhino data is all in world space, so add object at 0,0,0
     ob.location = (0.0, 0.0, 0.0)
     try:
         layer.objects.link(ob)
     except Exception:
         pass
-    
-def import_render_mesh(og,context, n, Name, Id, layer, rhinomat):
+
+
+def import_render_mesh(og, context, n, Name, Id, layer, rhinomat):
     # concatenate all meshes from all (brep) faces,
     # adjust vertex indices for faces accordingly
     # first get all render meshes
-    if og.ObjectType==r3d.ObjectType.Extrusion:
+    if og.ObjectType == r3d.ObjectType.Extrusion:
         msh = [og.GetMesh(r3d.MeshType.Any)]
-    elif og.ObjectType==r3d.ObjectType.Mesh:
+    elif og.ObjectType == r3d.ObjectType.Mesh:
         msh = [og]
-    elif og.ObjectType==r3d.ObjectType.Brep:
+    elif og.ObjectType == r3d.ObjectType.Brep:
         msh = [og.Faces[f].GetMesh(r3d.MeshType.Any) for f in range(len(og.Faces)) if type(og.Faces[f])!=list]
-    fidx=0
+    fidx = 0
     faces = []
     vertices = []
     # now add all faces and vertices to the main lists
     for m in msh:
-        if not m: continue
+        if not m:
+            continue
         faces.extend([list(map(lambda x: x + fidx, m.Faces[f])) for f in range(len(m.Faces))])
         fidx = fidx + len(m.Vertices)
         vertices.extend([(m.Vertices[v].X, m.Vertices[v].Y, m.Vertices[v].Z) for v in range(len(m.Vertices))])

@@ -33,10 +33,6 @@ bl_info = {
     "category": "Import-Export",
 }
 
-import os.path
-import binascii
-import struct
-
 import bpy
 # ImportHelper is a helper class, defines filename and
 # invoke() function which calls the file selector.
@@ -47,6 +43,7 @@ from bpy.types import Operator
 import rhino3dm as r3d
 
 from .read3dm import read_3dm
+
 
 class Import3dm(Operator, ImportHelper):
     """Import Rhinoceros 3D files (.3dm). Currently does render meshes only, more geometry and data to follow soon."""
@@ -83,17 +80,21 @@ class Import3dm(Operator, ImportHelper):
     def execute(self, context):
         return read_3dm(context, self.filepath, self.import_hidden)
 
+
 # Only needed if you want to add into a dynamic menu
 def menu_func_import(self, context):
     self.layout.operator(Import3dm.bl_idname, text="Rhinoceros 3D (.3dm)")
+
 
 def register():
     bpy.utils.register_class(Import3dm)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
 
+
 def unregister():
     bpy.utils.unregister_class(Import3dm)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
+
 
 if __name__ == "__main__":
     register()
