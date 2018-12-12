@@ -24,6 +24,7 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+*.whl
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -105,3 +106,6 @@ venv.bak/
 
 # vscode
 .vscode/
+
+# MacOS
+.DS_Store
