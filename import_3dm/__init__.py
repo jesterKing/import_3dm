@@ -24,7 +24,7 @@
 bl_info = {
     "name": "Import Rhinoceros 3D",
     "author": "jesterKing, Joel Putnam",
-    "version": (0, 0, 1),
+    "version": (0, 0, 2),
     "blender": (2, 80, 0),
     "location": "File > Import > Rhinoceros 3D (.3dm)",
     "description": "This addon lets you import Rhinoceros 3dm files",
@@ -32,10 +32,6 @@ bl_info = {
     "wiki_url": "https://github.com/jesterKing/import_3dm",
     "category": "Import-Export",
 }
-
-import os.path
-import binascii
-import struct
 
 import bpy
 # ImportHelper is a helper class, defines filename and
@@ -47,6 +43,7 @@ from bpy.types import Operator
 import rhino3dm as r3d
 
 from .read3dm import read_3dm
+
 
 class Import3dm(Operator, ImportHelper):
     """Import Rhinoceros 3D files (.3dm). Currently does render meshes only, more geometry and data to follow soon."""
@@ -86,6 +83,7 @@ class Import3dm(Operator, ImportHelper):
     def execute(self, context):
         return read_3dm(context, self.filepath, self.import_hidden,self.handle_units)
 
+
 # Only needed if you want to add into a dynamic menu
 def menu_func_import(self, context):
     self.layout.operator(Import3dm.bl_idname, text="Rhinoceros 3D (.3dm)")
@@ -95,9 +93,11 @@ def register():
     bpy.utils.register_class(Import3dm)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
 
+
 def unregister():
     bpy.utils.unregister_class(Import3dm)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
+
 
 if __name__ == "__main__":
     register()

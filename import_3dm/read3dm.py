@@ -23,7 +23,8 @@
 import os.path
 import bpy
 import rhino3dm as r3d
-from . import converters 
+from . import converters
+
 
 
 def read_3dm(context, filepath, import_hidden, handle_units):
@@ -59,28 +60,30 @@ def read_3dm(context, filepath, import_hidden, handle_units):
 
     converters.handle_materials(context, model, materials)
 
-    converters.handle_layers(context, model, toplayer, layerids, materials )
-        
+    converters.handle_layers(context, model, toplayer, layerids, materials)
+
     for ob in model.Objects:
-        og=ob.Geometry
-        if og.ObjectType not in converters.RHINO_TYPE_TO_IMPORT: continue
+        og = ob.Geometry
+        if og.ObjectType not in converters.RHINO_TYPE_TO_IMPORT:
+            continue
         convert_rhino_object = converters.RHINO_TYPE_TO_IMPORT[og.ObjectType]
         attr = ob.Attributes
-        if not attr.Visible: continue    
-        if attr.Name == "" or attr.Name==None:
+        if not attr.Visible:
+            continue
+        if attr.Name == "" or attr.Name is None:
             n = str(og.ObjectType).split(".")[1]+" " + str(attr.Id)
         else:
             n = attr.Name
-        
+
         if attr.LayerIndex != -1:
             rhinolayer = model.Layers[attr.LayerIndex]
         else:
             rhinolayer = model.Layers[0]
-        
+
         matname = None
         if attr.MaterialIndex != -1:
             matname = converters.material_name(model.Materials[attr.MaterialIndex])
-    
+
         layeruuid = rhinolayer.Id
         rhinomatname = rhinolayer.Name + "+" + str(layeruuid)
         if matname:

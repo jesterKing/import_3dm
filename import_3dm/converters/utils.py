@@ -19,9 +19,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-    
-##### data tagging
-    
+
+# *** data tagging
+
+
 def tag_data(idblock, uuid, name):
     """
     Given a Blender data idblock tag it with the id an name
@@ -30,7 +31,8 @@ def tag_data(idblock, uuid, name):
     """
     idblock['rhid'] = str(uuid)
     idblock['rhname'] = name
-    
+
+
 def get_iddata(base, uuid, name, obdata):
     """
     Get an iddata. If an object with given uuid is found in
@@ -38,7 +40,7 @@ def get_iddata(base, uuid, name, obdata):
     potentially with obdata if that is set
     """
     founditem = None
-    if uuid!=None:
+    if uuid is not None:
         for item in base:
             if item.get('rhid', None) == str(uuid):
                 founditem = item
