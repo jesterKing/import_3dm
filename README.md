@@ -32,7 +32,7 @@ Installation on Windows
 
 If you just now downloaded Blender 2.80 you can either use the operator search menu by pressing F3, or through File > Import.
 
-Upgrading Rhno3dm
+Upgrading Rhino3dm
 =======================
 * Open a cmd.exe (start > run > cmd.exe)
 * upgrade `rhino3dm.py` by typing in the command prompt: `pip3.7 install --upgrade --user rhino3dm`
