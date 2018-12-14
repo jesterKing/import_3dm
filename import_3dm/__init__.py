@@ -64,28 +64,32 @@ class Import3dm(Operator, ImportHelper):
 
     # List of operator properties, the attributes will be assigned
     # to the class instance from the operator settings before calling.
+    handle_units: EnumProperty(
+       name="Unit Conversion",
+       description="How Should We handle Conversion?",
+       items=(
+           ('Ignore', "Ignore Units", "Ignore unit miss matches"),
+           ('Rhino', "Convert Rhino", "Convert the incoming Rhino File into the working Blender Units"),
+           ('Blender', "Convert Blender", "Convert the working Blender file units to the incoming Rhino File Units"),
+       ),
+       default='Ignore',
+   )
+    
     import_hidden: BoolProperty(
         name="Import Hidden Geometry",
         description="Import Hidden Geometry",
         default=True,
     )
 
-#    type: EnumProperty(
-#        name="Example Enum",
-#        description="Choose between two items",
-#        items=(
-#            ('OPT_A', "First Option", "Description one"),
-#            ('OPT_B', "Second Option", "Description two"),
-#        ),
-#        default='OPT_A',
-#    )
+    
 
     def execute(self, context):
-        return read_3dm(context, self.filepath, self.import_hidden)
+        return read_3dm(context, self.filepath, self.import_hidden,self.handle_units)
 
 # Only needed if you want to add into a dynamic menu
 def menu_func_import(self, context):
     self.layout.operator(Import3dm.bl_idname, text="Rhinoceros 3D (.3dm)")
+
 
 def register():
     bpy.utils.register_class(Import3dm)

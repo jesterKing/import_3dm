@@ -26,7 +26,7 @@ from .material import handle_materials, material_name
 from .layers import handle_layers
 from .render_mesh import import_render_mesh
 from .curve import import_curve
-
+from .units import CHECK_BLENDER_UNITS, unit_converter
 '''
 Dictionary mapping between the Rhino file types and importer functions
 '''

@@ -25,16 +25,34 @@ import bpy
 import rhino3dm as r3d
 from . import converters 
 
-def read_3dm(context, filepath, import_hidden):
+
+def read_3dm(context, filepath, import_hidden, handle_units):
     
+    model = r3d.File3dm.Read(filepath)
+    rhino_units =  model.Settings.ModelUnitSystem
+    blender_units = context.scene.unit_settings.length_unit
+    u_converter = None
+
+    if (rhino_units == converters.CHECK_BLENDER_UNITS[blender_units]):
+       pass
+    else:
+        if handle_units == 'Ignore':
+            u_converter = False
+            pass
+        elif handle_units == 'Rhino':
+            u_converter = converters.unit_converter(rhino_units,blender_units)
+            
+        elif handle_units == 'Blender':
+            ### need to scale the current scene before we do anyting 
+            u_converter = converters.unit_converter(blender_units,rhino_units)
+            u_converter.convert_scene(context.scene)
+            u_converter = False
+
     top_collection_name = os.path.splitext(os.path.basename(filepath))[0]
     if top_collection_name in context.blend_data.collections.keys():
         toplayer = context.blend_data.collections[top_collection_name]
     else:
-        toplayer = context.blend_data.collections.new(name=top_collection_name)
-
-    model = r3d.File3dm.Read(filepath)
-    
+        toplayer = context.blend_data.collections.new(name=top_collection_name) 
     layerids = {}
     materials = {}
 
@@ -70,7 +88,7 @@ def read_3dm(context, filepath, import_hidden):
             rhinomat = materials[rhinomatname]
         layer = layerids[str(layeruuid)][1]
 
-        convert_rhino_object(og, context, n, attr.Name, attr.Id, layer, rhinomat)
+        convert_rhino_object(u_converter, og, context, n, attr.Name, attr.Id, layer, rhinomat)
  
     # finally link in the container collection (top layer) into the main
     # scene collection.
