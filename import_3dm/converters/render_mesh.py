@@ -38,18 +38,16 @@ def add_object(u_converter, context, name, origname, id, verts, faces, layer, rh
     #tag_data(ob, id, origname)
     # Rhino data is all in world space, so add object at 0,0,0
     ob.location = (0.0, 0.0, 0.0)        
+    
     try:
         layer.objects.link(ob)
+        if  u_converter:
+            ob = u_converter.convert_object(ob)
 
     except Exception:
         pass
-
-    
-    if  u_converter:
-        ob = u_converter.convert_object(ob)
-    
-    
-def import_render_mesh(u_converter, og,context, n, Name, Id, layer, rhinomat):
+ 
+def import_render_mesh(u_converter,og,context, n, Name, Id, layer, rhinomat):
     # concatenate all meshes from all (brep) faces,
     # adjust vertex indices for faces accordingly
     # first get all render meshes

@@ -64,7 +64,6 @@ UNIT_FACTOR = {
     'MILES_INCHES' : 63360 ,
     'MILES_FEET' : 5280 ,
 
-
     ### feet
     'FEET_MICROMETERS' : 304800 ,
     'FEET_MILLIMETERS' : 304.8 ,
@@ -153,7 +152,6 @@ UNIT_FACTOR = {
     'MILLIMETERS_FEET' : 0.00328084,
     'MILLIMETERS_MILES' : 0.0000006213712,
 
-
     ### micrometer
     'MICROMETERS_MILLIMETERS': 0.001,
     'MICROMETERS_CENTIMETERS' : 0.0001,
@@ -178,10 +176,10 @@ def convert_factor(From, To):
             c = From + '_' + CLEAN_RHINO_UNITS[To]
             return UNIT_FACTOR[c]
 
-
 class unit_converter:
 
-    def __init__(self, From, To):
+    def __init__(self, toplayer, From, To):
+        self.toplayer = toplayer
         self.From = From
         self.To = To
         self.Factor = convert_factor(From, To)
@@ -191,37 +189,24 @@ class unit_converter:
         return v
 
     def convert_object(self, blender_object):
-        ### get the current scale assuming user may have overwritten object
-        ### and wants to keep this
-
-        current_scaleX  = blender_object.scale[0]
-        current_scaleY  = blender_object.scale[1]
-        current_scaleZ  = blender_object.scale[2]
         
-        ### make sure that the object is scaled 1:1 before we get the dimensions
-        blender_object.scale = (1.0,1.0,1.0)
+        # ### get the current scale assuming user may have overwritten object
+        # ### and wants to keep this
+        # current_scaleX  = blender_object.scale[0]
+        # current_scaleY  = blender_object.scale[1]
+        # current_scaleZ  = blender_object.scale[2]
+        
+        # ### make sure that the object is scaled 1:1 before we resize
+        # blender_object.scale = (1.0,1.0,1.0)
 
-        ###dimensions = blender_object.dimensions
+        ### set the new scale factor
         scale_factor = (self.Factor,self.Factor,self.Factor)
         
         blender_object.scale = scale_factor
-       
-        # bpy.ops.object.select_all(action='DESELECT')
-        
-        # if(blender_object.select_get() is False):
-        #    blender_object.select_set(True)
-
-        # bpy.context.view_layer.objects.active = blender_object
-        # bpy.ops.object.transform_apply(location = False, scale = True, rotation = False)
-        # bpy.ops.object.select_all(action='DESELECT')
-        
-        ### set back the scaling factor
-        ##blender_object.scale = (current_scaleX ,current_scaleY ,current_scaleZ)
 
         return blender_object
 
-
-    def convert_scene(self, scene):
+    def convert_blender(self, scene):
         self.Factor(self.From)
 
         pass
