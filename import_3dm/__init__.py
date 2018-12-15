@@ -65,11 +65,11 @@ class Import3dm(Operator, ImportHelper):
        name="Unit Conversion",
        description="How Should We handle Conversion?",
        items=(
-           ('Ignore', "Ignore Units", "Ignore unit miss matches"),
-           ('Rhino', "Convert Rhino", "Convert the incoming Rhino File into the working Blender Units"),
-           ('Blender', "Convert Blender", "Convert the working Blender file units to the incoming Rhino File Units"),
+           ('Default', "Default", "Import Rhino at scale relative to current units"),
+           ('Rhino', "Convert Rhino", "Rescale Rhino into the current Blender unit system"),
+           ('Blender', "Convert Blender", "Rescale Blender into the incoming Rhino unit system"),
        ),
-       default='Ignore',
+       default='Default',
    )
     
     import_hidden: BoolProperty(

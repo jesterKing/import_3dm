@@ -33,17 +33,15 @@ def add_object(u_converter, context, name, origname, id, verts, faces, layer, rh
     mesh.materials.append(rhinomat)
     ob = utils.get_iddata(context.blend_data.objects, id, origname, mesh)
     # Rhino data is all in world space, so add object at 0,0,0
-    ob.location = (0.0, 0.0, 0.0)        
-    
+    ob.location = (0.0, 0.0, 0.0)
+    ob = u_converter.convert_units(ob)
+
     try:
         layer.objects.link(ob)
-        if  u_converter:
-            ob = u_converter.convert_object(ob)
-
     except Exception:
         pass
- 
-def import_render_mesh(u_converter,og,context, n, Name, Id, layer, rhinomat):
+
+def import_render_mesh(u_converter, og,context, n, Name, Id, layer, rhinomat):
     # concatenate all meshes from all (brep) faces,
     # adjust vertex indices for faces accordingly
     # first get all render meshes
@@ -64,4 +62,4 @@ def import_render_mesh(u_converter,og,context, n, Name, Id, layer, rhinomat):
         fidx = fidx + len(m.Vertices)
         vertices.extend([(m.Vertices[v].X, m.Vertices[v].Y, m.Vertices[v].Z) for v in range(len(m.Vertices))])
     # done, now add object to blender
-    add_object(u_converter,context, n, Name, Id, vertices, faces, layer, rhinomat)
+    add_object(u_converter, context, n, Name, Id, vertices, faces, layer, rhinomat)

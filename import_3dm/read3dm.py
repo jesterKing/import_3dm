@@ -28,9 +28,9 @@ from . import converters
 
 
 def read_3dm(context, filepath, import_hidden, handle_units):
-    
+
     model = r3d.File3dm.Read(filepath)
-    
+
     top_collection_name = os.path.splitext(os.path.basename(filepath))[0]
     if top_collection_name in context.blend_data.collections.keys():
         toplayer = context.blend_data.collections[top_collection_name]
@@ -43,23 +43,19 @@ def read_3dm(context, filepath, import_hidden, handle_units):
     blender_units = context.scene.unit_settings.length_unit
     u_converter = None
 
-    if (rhino_units == converters.CHECK_BLENDER_UNITS[blender_units]):
-       pass
-    else:
-        if handle_units == 'Ignore':
-            u_converter = False
-        elif handle_units == 'Rhino':
-            ### setup the unit conversions 
-            u_converter = converters.unit_converter(toplayer,rhino_units,blender_units)
-            
-        elif handle_units == 'Blender':
-            ### need to scale the current scene before we do anyting 
-            u_converter = converters.unit_converter(None,blender_units,rhino_units)
-            u_converter.convert_blender(context.scene)
-            u_converter = False
+    if handle_units == 'Default':
+        ### always bring in at incoming units relative to meters "blender default units"
+        u_converter = converters.unit_converter(handle_units, blender_units, rhino_units)
+    elif handle_units == 'Rhino':
+        ### setup the unit conversions 
+        u_converter = converters.unit_converter(handle_units, blender_units, rhino_units)
+
+    elif handle_units == 'Blender':
+        ### need to scale the current scene before we do anyting 
+        u_converter = converters.unit_converter(handle_units, blender_units, rhino_units)
+        u_converter.convert_blender()
 
     converters.handle_materials(context, model, materials)
-
     converters.handle_layers(context, model, toplayer, layerids, materials)
 
     for ob in model.Objects:
@@ -93,15 +89,13 @@ def read_3dm(context, filepath, import_hidden, handle_units):
         layer = layerids[str(layeruuid)][1]
 
         convert_rhino_object(u_converter,og, context, n, attr.Name, attr.Id, layer, rhinomat)
- 
+
     # finally link in the container collection (top layer) into the main
     # scene collection.
     try:
         context.blend_data.scenes[0].collection.children.link(toplayer)
         bpy.ops.object.shade_smooth({'selected_editable_objects': toplayer.all_objects})
-
-        if  u_converter:
-            bpy.ops.object.transform_apply({'selected_editable_objects': toplayer.all_objects},location=False, rotation=False, scale=True)
+        bpy.ops.object.transform_apply({'selected_editable_objects': toplayer.all_objects},location=False, rotation=False, scale=True)
 
     except Exception:
         pass
