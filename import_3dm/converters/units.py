@@ -74,18 +74,13 @@ class unit_converter:
 
     #### blender creates in meters always assume we are converting from incoming units to this
     def default_import(self, blender_object):
-        ##c = clean_rhino_units[self.rhino_units] + '_METERS'
         f = r3d.UnitSystem.UnitScale(self.rhino_units, r3d.UnitSystem.Meters)
-        ##f = unit_factor[c]
         scale_factor = (f,f,f)
         blender_object.scale = scale_factor
         return blender_object
 
     def convert_rhino(self, blender_object):
-        ##c = clean_rhino_units[self.rhino_units] + '_METERS'
-        ##i = unit_factor[c]
         i = r3d.UnitSystem.UnitScale(self.rhino_units, r3d.UnitSystem.Meters)
-        ##f = convert_factor(self.blender_units, self.rhino_units)
         f = r3d.UnitSystem.UnitScale(self.blender_units, self.rhino_units)
         g = i*f
         scale_factor = (g,g,g)
@@ -125,8 +120,6 @@ class unit_converter:
                 ### set temp scale to 1, 1, 1
                 blender_object.scale = (1,1,1)
                 ### set new scale based on factor
-                ##c = clean_rhino_units[self.rhino_units] + '_METERS'
-                ##f = unit_factor[c]
                 f = r3d.UnitSystem.UnitScale(self.rhino_units, r3d.UnitSystem.Meters)
                 scale_factor = (f,f,f)
                 blender_object.scale = scale_factor
@@ -141,8 +134,6 @@ class unit_converter:
                 blender_object.scale = (scale_store_x, scale_store_y, scale_store_z)
 
             else: ### handle cameras differnetly because well blender....
-                ##c = clean_rhino_units[self.rhino_units] +'_'+ self.blender_units
-                ##f = unit_factor[c]
                 f = r3d.UnitSystem.UnitScale(self.rhino_units, self.blender_units)
                 cam_scale_x = scale_store_x * f
                 cam_scale_y = scale_store_x * f
