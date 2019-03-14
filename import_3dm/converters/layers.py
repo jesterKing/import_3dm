@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import os.path
 from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
 import rhino3dm as r3d
 from . import utils
@@ -63,15 +62,3 @@ def handle_layers(context, model, toplayer, layerids, materials):
                 toplayer.children.link(layerids[str(l.Id)][1])
             except Exception:
                 pass
-
-class layers:
-
-
-    def __init__(self, context, filepath, model):
-
-        top_collection_name = os.path.splitext(os.path.basename(filepath))[0]
-        if top_collection_name in context.blend_data.collections.keys():
-            self.toplayer = context.blend_data.collections[top_collection_name]
-        else:
-            self.toplayer = context.blend_data.collections.new(name=top_collection_name)
-        
