@@ -25,7 +25,6 @@ import bpy
 import rhino3dm as r3d
 from . import converters
 
-
 def read_3dm(context, filepath, import_hidden):
     top_collection_name = os.path.splitext(os.path.basename(filepath))[0]
     if top_collection_name in context.blend_data.collections.keys():
@@ -35,8 +34,14 @@ def read_3dm(context, filepath, import_hidden):
 
     model = r3d.File3dm.Read(filepath)
     
+    # Get proper scale for conversion
+    scale = converters.utils.RHINO_UNITSYSTEM[model.Settings.ModelUnitSystem] / context.scene.unit_settings.scale_length    
+    
     layerids = {}
     materials = {}
+    views = {}
+
+    converters.handle_views(context, model, toplayer, views, scale)
 
     converters.handle_materials(context, model, materials)
 
@@ -72,7 +77,7 @@ def read_3dm(context, filepath, import_hidden):
             rhinomat = materials[rhinomatname]
         layer = layerids[str(layeruuid)][1]
 
-        convert_rhino_object(og, context, n, attr.Name, attr.Id, layer, rhinomat)
+        convert_rhino_object(og, context, n, attr.Name, attr.Id, layer, rhinomat, scale)
 
     # finally link in the container collection (top layer) into the main
     # scene collection.

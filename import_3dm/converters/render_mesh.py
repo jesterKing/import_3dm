@@ -41,7 +41,7 @@ def add_object(context, name, origname, id, verts, faces, layer, rhinomat):
         pass
 
 
-def import_render_mesh(og, context, n, Name, Id, layer, rhinomat):
+def import_render_mesh(og, context, n, Name, Id, layer, rhinomat, scale):
     # concatenate all meshes from all (brep) faces,
     # adjust vertex indices for faces accordingly
     # first get all render meshes
@@ -60,6 +60,6 @@ def import_render_mesh(og, context, n, Name, Id, layer, rhinomat):
             continue
         faces.extend([list(map(lambda x: x + fidx, m.Faces[f])) for f in range(len(m.Faces))])
         fidx = fidx + len(m.Vertices)
-        vertices.extend([(m.Vertices[v].X, m.Vertices[v].Y, m.Vertices[v].Z) for v in range(len(m.Vertices))])
+        vertices.extend([(m.Vertices[v].X * scale, m.Vertices[v].Y * scale, m.Vertices[v].Z * scale) for v in range(len(m.Vertices))])
     # done, now add object to blender
     add_object(context, n, Name, Id, vertices, faces, layer, rhinomat)
