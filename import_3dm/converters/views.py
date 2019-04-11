@@ -78,9 +78,3 @@ def handle_views(context, model, layer, cameras, scale):
             layer.objects.link(camera)
         except Exception:
             pass
-
-def add_camera(camera, layer):
-    try:
-        layer.objects.link(camera)
-    except Exception:
-        pass
