@@ -52,7 +52,8 @@ def handle_view(context, view, name, cameras, scale):
             blcam.sensor_width = 36.0
         elif vp.IsParallelProjection:
             blcam.type = "ORTHO"
-            blcam.ortho_scale = 10 # TODO: Find out how to get ortho scale from 3dm
+            frustum = vp.GetFrustum()
+            blcam.ortho_scale = (frustum['right'] - frustum['left']) * scale
             
         # Link camera data to new object
         blobj = utils.get_iddata(context.blend_data.objects, None, name, blcam)
