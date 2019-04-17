@@ -35,7 +35,7 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views)
     model = r3d.File3dm.Read(filepath)
     
     # Get proper scale for conversion
-    scale = converters.utils.RHINO_UNITSYSTEM[model.Settings.ModelUnitSystem] / context.scene.unit_settings.scale_length    
+    scale = r3d.UnitSystem.UnitScale(model.Settings.ModelUnitSystem, r3d.UnitSystem.Meters) / context.scene.unit_settings.scale_length    
     
     layerids = {}
     materials = {}
