@@ -22,6 +22,7 @@
 
 # *** data tagging
 
+import rhino3dm as r3d
 
 def tag_data(idblock, uuid, name):
     """
@@ -62,3 +63,33 @@ def get_iddata(base, uuid, name, obdata):
             theitem = base.new(name=name)
         tag_data(theitem, uuid, name)
     return theitem
+
+'''
+Dictionary mapping between the Rhino unit systems and their value relative
+to meters
+'''
+RHINO_UNITSYSTEM = { 
+    r3d.UnitSystem.Angstroms: 1.0,
+    r3d.UnitSystem.AstronomicalUnits: 1.0,
+    r3d.UnitSystem.Centimeters: 0.01,
+    r3d.UnitSystem.Decimeters: 0.1,
+    r3d.UnitSystem.Dekameters: 1.0,
+    r3d.UnitSystem.Feet: 0.3048,
+    r3d.UnitSystem.Gigameters: 1000000000.0,
+    r3d.UnitSystem.Hectomeers: 100.0,
+    r3d.UnitSystem.Inches: 0.0254,
+    r3d.UnitSystem.Kilometers: 1000.0,
+    r3d.UnitSystem.LightYears: 9.461e15,
+    r3d.UnitSystem.Megameters: 1000000.0,
+    r3d.UnitSystem.Meters: 1.0,
+    r3d.UnitSystem.Microinches: 2.54e-8,
+    r3d.UnitSystem.Microns: 1e-6,
+    r3d.UnitSystem.Miles: 1609.34,
+    r3d.UnitSystem.Millimeters: 0.001,
+    r3d.UnitSystem.Mils: 2.54e-5,
+    r3d.UnitSystem.Nanometers: 1e-9,
+    r3d.UnitSystem.NauticalMiles: 1852,
+    #r3d.UnitSystem.None: 1.0,
+    r3d.UnitSystem.Parsecs: 3.086e16,
+    r3d.UnitSystem.PrinterPicas: 0.0042333,
+    r3d.UnitSystem.PrinterPoints: 0.000352778}
