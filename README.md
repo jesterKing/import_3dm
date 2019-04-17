@@ -53,11 +53,11 @@ Install pip3.7
         *  `ls ./bin`
         * ensure the listing gives `pip3.7`
 
-Install rhino3dm.py
+Install or upgrade rhino3dm.py
 -------------------
 * Using the terminal at the location from the first part
-* First install (or update) `rhino3dm.py`
-    * `./bin/pip3.7 install --target lib/python3.7 rhino3dm`
+* First install (or upgrade) `rhino3dm.py`
+    * `./bin/pip3.7 install --upgrade --target lib/python3.7 rhino3dm`
 
 Install import_3dm
 ------------------
