@@ -25,7 +25,7 @@ from . import utils
 from mathutils import Matrix
 
 
-def handle_view(context, view, name, cameras, scale):
+def handle_view(context, view, name, scale):
         vp = view.Viewport
 
         # Construct transformation matrix
@@ -59,21 +59,21 @@ def handle_view(context, view, name, cameras, scale):
         blobj = utils.get_iddata(context.blend_data.objects, None, name, blcam)
         blobj.matrix_world = mat
             
-        # Store new camera
-        cameras[name] = blobj
+        # Return new camera
         return blobj
 
-def handle_views(context, model, layer, cameras, scale):
+def handle_views(context, model, layer, views, layer_name, scale):
     
-    viewLayer = context.blend_data.collections.new(name="Views")
+    viewLayer = context.blend_data.collections.new(name=layer_name)
     # Look through 3d views
-    for v in model.Views:
-        camera = handle_view(context, v, "RhinoView_" + v.Name, cameras, scale)
+    for v in views:
+        camera = handle_view(context, v, "RhinoView_" + v.Name, scale)
         try:
             viewLayer.objects.link(camera)
         except Exception:
             pass
 
+    '''
     namedViewLayer = context.blend_data.collections.new(name="NamedViews")
 
     # Look through named views
@@ -83,6 +83,6 @@ def handle_views(context, model, layer, cameras, scale):
             namedViewLayer.objects.link(camera)
         except Exception:
             pass
-
+    '''
     layer.children.link(viewLayer)
-    layer.children.link(namedViewLayer)
+    #layer.children.link(namedViewLayer)

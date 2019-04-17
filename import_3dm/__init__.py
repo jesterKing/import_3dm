@@ -67,6 +67,18 @@ class Import3dm(Operator, ImportHelper):
         default=True,
     )
 
+    import_views: BoolProperty(
+        name="Import views.",
+        description="Import standard views (Top, Front, Right, Perspective) as cameras.",
+        default=True,
+    )
+
+    import_named_views: BoolProperty(
+        name="Import named views.",
+        description="Import named views as cameras.",
+        default=True,
+    )       
+
 #    type: EnumProperty(
 #        name="Example Enum",
 #        description="Choose between two items",
@@ -78,7 +90,7 @@ class Import3dm(Operator, ImportHelper):
 #    )
 
     def execute(self, context):
-        return read_3dm(context, self.filepath, self.import_hidden)
+        return read_3dm(context, self.filepath, self.import_hidden, self.import_views, self.import_named_views)
 
 
 # Only needed if you want to add into a dynamic menu
