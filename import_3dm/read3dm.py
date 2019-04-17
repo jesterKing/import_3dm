@@ -1,6 +1,6 @@
 # MIT License
 
-# Copyright (c) 2018 Nathan Letwory , Joel Putnam
+# Copyright (c) 2018-2019 Nathan Letwory, Joel Putnam, Tom Svilans
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +35,7 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views)
     model = r3d.File3dm.Read(filepath)
     
     # Get proper scale for conversion
-    scale = converters.utils.RHINO_UNITSYSTEM[model.Settings.ModelUnitSystem] / context.scene.unit_settings.scale_length    
+    scale = r3d.UnitSystem.UnitScale(model.Settings.ModelUnitSystem, r3d.UnitSystem.Meters) / context.scene.unit_settings.scale_length    
     
     layerids = {}
     materials = {}
