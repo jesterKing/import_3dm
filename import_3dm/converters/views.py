@@ -65,7 +65,7 @@ def handle_view(context, view, name, scale):
 def handle_views(context, model, layer, views, layer_name, scale):
     
     viewLayer = context.blend_data.collections.new(name=layer_name)
-    # Look through 3d views
+
     for v in views:
         camera = handle_view(context, v, "RhinoView_" + v.Name, scale)
         try:
@@ -73,16 +73,4 @@ def handle_views(context, model, layer, views, layer_name, scale):
         except Exception:
             pass
 
-    '''
-    namedViewLayer = context.blend_data.collections.new(name="NamedViews")
-
-    # Look through named views
-    for v in model.NamedViews:
-        camera = handle_view(context, v, "RhinoNamedView_" + v.Name, cameras, scale)
-        try:
-            namedViewLayer.objects.link(camera)
-        except Exception:
-            pass
-    '''
     layer.children.link(viewLayer)
-    #layer.children.link(namedViewLayer)
