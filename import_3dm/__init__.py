@@ -1,6 +1,6 @@
 # MIT License
 
-# Copyright (c) 2018 Nathan Letwory , Joel Putnam
+# Copyright (c) 2018-2019 Nathan Letwory, Joel Putnam, Tom Svilans
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,8 +23,8 @@
 
 bl_info = {
     "name": "Import Rhinoceros 3D",
-    "author": "jesterKing, Joel Putnam",
-    "version": (0, 0, 2),
+    "author": "Nathan 'jesterKing' Letwory, Joel Putnam, Tom Svilans",
+    "version": (0, 0, 3),
     "blender": (2, 80, 0),
     "location": "File > Import > Rhinoceros 3D (.3dm)",
     "description": "This addon lets you import Rhinoceros 3dm files",
