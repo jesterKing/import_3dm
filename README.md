@@ -31,3 +31,40 @@ Installation on Windows
 * Done. Probably a good idea to restart Blender.
 
 If you just now downloaded Blender 2.80 you can either use the operator search menu by pressing F3, or through File > Import.
+
+Installation on Mac OS X
+========================
+
+Install Blender 2.80 and open terminal
+--------------------------------------
+* Install Blender 2.80 into Applications
+* open a terminal
+* `cd /Applications/blender.app/Contents/Resources/2.80`
+
+Install pip3.7
+--------------
+* Using the terminal at the location from the first part
+* Ensure `pip3.7` for Blender is installed properly
+    * first we remove the old pip in the site-packages
+        * `rm -rf lib/python3.7/site-packages/pip*`
+    * now we install `pip3.7`
+        * `./bin/python3.7m lib/python3.7/ensurepip`
+    * check `pip3.7` is now installed in the expected location
+        *  `ls ./bin`
+        * ensure the listing gives `pip3.7`
+
+Install or upgrade rhino3dm.py
+-------------------
+* Using the terminal at the location from the first part
+* First install (or upgrade) `rhino3dm.py`
+    * `./bin/pip3.7 install --upgrade --target lib/python3.7 rhino3dm`
+
+Install import_3dm
+------------------
+* Get the correct zip file from https://github.com/jesterKing/import_3dm/releases/latest (the one with import_3dm in the name)
+* Start Blender 2.80
+* In top menu press Edit > User Preferences...
+* Select the section Add-ons
+* In the bottom of that window select Install add-on from file...
+* Browse to where you saved the zip file, select it and press the Install add-on from file button in the top right of the file browser
+* Done. Probably a good idea to restart Blender.
