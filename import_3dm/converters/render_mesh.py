@@ -59,6 +59,14 @@ def import_render_mesh(og, context, n, Name, Id, layer, rhinomat, scale):
         if not m:
             continue
         faces.extend([list(map(lambda x: x + fidx, m.Faces[f])) for f in range(len(m.Faces))])
+
+        # Rhino always uses 4 values to describe faces, which can lead to
+        # invalid faces in Blender. Tris will have a duplicate index for the 4th
+        # value.
+        for f in faces:
+            if f[-1] == f[-2]:
+                del f[-1]
+
         fidx = fidx + len(m.Vertices)
         vertices.extend([(m.Vertices[v].X * scale, m.Vertices[v].Y * scale, m.Vertices[v].Z * scale) for v in range(len(m.Vertices))])
     # done, now add object to blender
