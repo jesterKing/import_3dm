@@ -39,7 +39,7 @@ Install Blender 2.80 and open terminal
 --------------------------------------
 * Install Blender 2.80 into Applications
 * open a terminal
-* `cd /Applications/blender.app/Contents/Resources/2.80`
+* `cd /Applications/blender.app/Contents/Resources/2.80/python`
 
 Install pip3.7
 --------------
