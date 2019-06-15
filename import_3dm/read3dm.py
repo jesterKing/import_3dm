@@ -25,7 +25,7 @@ import bpy
 import rhino3dm as r3d
 from . import converters
 
-def read_3dm(context, filepath, import_hidden, import_views, import_named_views):
+def read_3dm(context, filepath, import_hidden, import_views, import_named_views, update_materials):
     top_collection_name = os.path.splitext(os.path.basename(filepath))[0]
     if top_collection_name in context.blend_data.collections.keys():
         toplayer = context.blend_data.collections[top_collection_name]
@@ -46,9 +46,9 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views)
     if import_named_views:
         converters.handle_views(context, model, toplayer, model.NamedViews, "NamedViews", scale)
 
-    converters.handle_materials(context, model, materials)
+    converters.handle_materials(context, model, materials, update_materials)
 
-    converters.handle_layers(context, model, toplayer, layerids, materials)
+    converters.handle_layers(context, model, toplayer, layerids, materials, update_materials)
 
     for ob in model.Objects:
         og = ob.Geometry
