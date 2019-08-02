@@ -38,7 +38,7 @@ import bpy
 # invoke() function which calls the file selector.
 from bpy_extras.io_utils import ImportHelper
 from bpy.props import StringProperty, BoolProperty, EnumProperty
-from bpy.types import Operator, AddonPreferences
+from bpy.types import Operator
 
 from .read3dm import read_3dm
 
