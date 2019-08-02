@@ -38,9 +38,7 @@ import bpy
 # invoke() function which calls the file selector.
 from bpy_extras.io_utils import ImportHelper
 from bpy.props import StringProperty, BoolProperty, EnumProperty
-from bpy.types import Operator
-
-import rhino3dm as r3d
+from bpy.types import Operator, AddonPreferences
 
 from .read3dm import read_3dm
 
@@ -98,7 +96,6 @@ class Import3dm(Operator, ImportHelper):
 
     def execute(self, context):
         return read_3dm(context, self.filepath, self.import_hidden, self.import_views, self.import_named_views, self.update_materials)
-
 
 # Only needed if you want to add into a dynamic menu
 def menu_func_import(self, context):
