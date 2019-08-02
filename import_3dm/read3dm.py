@@ -46,7 +46,7 @@ def install_dependencies():
 
         res = pipmain(["install", "rhino3dm"])
         if res == 0:
-            import speckle
+            import rhino3dm
         else:
             raise Exception("Failed to install rhino3dm.")
     except:
