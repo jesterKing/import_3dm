@@ -45,9 +45,7 @@ def install_dependencies():
             from pip._internal import main as pipmain
 
         res = pipmain(["install", "rhino3dm"])
-        if res == 0:
-            import rhino3dm
-        else:
+        if res > 0:
             raise Exception("Failed to install rhino3dm.")
     except:
         raise Exception("Failed to install dependencies. Please make sure you have pip installed.")
