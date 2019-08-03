@@ -67,6 +67,12 @@ class Import3dm(Operator, ImportHelper):
         default=True,
     )
 
+    import_hidden_layers: BoolProperty(
+        name="Import Hidden Layers",
+        description="Import Hidden Layers",
+        default=True,
+    )    
+
     import_views: BoolProperty(
         name="Import standard views.",
         description="Import standard views (Top, Front, Right, Perspective) as cameras.",
@@ -97,7 +103,7 @@ class Import3dm(Operator, ImportHelper):
 #    )
 
     def execute(self, context):
-        return read_3dm(context, self.filepath, self.import_hidden, self.import_views, self.import_named_views, self.update_materials)
+        return read_3dm(context, self.filepath, self.import_hidden, self.import_views, self.import_named_views, self.update_materials, self.import_hidden_layers)
 
 
 # Only needed if you want to add into a dynamic menu

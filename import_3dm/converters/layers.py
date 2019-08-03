@@ -25,7 +25,7 @@ import rhino3dm as r3d
 from . import utils
 
 
-def handle_layers(context, model, toplayer, layerids, materials, update):
+def handle_layers(context, model, toplayer, layerids, materials, update, import_hidden=False):
     """
     In context read the Rhino layers from model
     then update the layerids dictionary passed in.
@@ -36,6 +36,8 @@ def handle_layers(context, model, toplayer, layerids, materials, update):
     # from GUID, create collection for each
     # layer
     for lid, l in enumerate(model.Layers):
+        if not l.Visible and not import_hidden:
+            continue
         lcol = utils.get_iddata(context.blend_data.collections, l.Id, l.Name, None)
         layerids[str(l.Id)] = (lid, lcol)
         utils.tag_data(layerids[str(l.Id)][1], l.Id, l.Name)

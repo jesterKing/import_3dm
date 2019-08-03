@@ -25,7 +25,7 @@ import bpy
 import rhino3dm as r3d
 from . import converters
 
-def read_3dm(context, filepath, import_hidden, import_views, import_named_views, update_materials):
+def read_3dm(context, filepath, import_hidden, import_views, import_named_views, update_materials=False, import_hidden_layers=False):
     top_collection_name = os.path.splitext(os.path.basename(filepath))[0]
     if top_collection_name in context.blend_data.collections.keys():
         toplayer = context.blend_data.collections[top_collection_name]
@@ -48,7 +48,7 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views,
 
     converters.handle_materials(context, model, materials, update_materials)
 
-    converters.handle_layers(context, model, toplayer, layerids, materials, update_materials)
+    converters.handle_layers(context, model, toplayer, layerids, materials, update_materials, import_hidden_layers)
 
     for ob in model.Objects:
         og = ob.Geometry
@@ -56,7 +56,7 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views,
             continue
         convert_rhino_object = converters.RHINO_TYPE_TO_IMPORT[og.ObjectType]
         attr = ob.Attributes
-        if not attr.Visible:
+        if not attr.Visible and not import_hidden:
             continue
         if attr.Name == "" or attr.Name is None:
             n = str(og.ObjectType).split(".")[1]+" " + str(attr.Id)
@@ -67,6 +67,10 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views,
             rhinolayer = model.Layers[attr.LayerIndex]
         else:
             rhinolayer = model.Layers[0]
+
+        if not rhinolayer.Visible and not import_hidden_layers:
+            print("Skipping hidden layer again.")
+            continue
 
         matname = None
         if attr.MaterialIndex != -1:
