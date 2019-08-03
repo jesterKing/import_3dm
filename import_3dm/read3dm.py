@@ -22,7 +22,41 @@
 
 import os.path
 import bpy
-import rhino3dm as r3d
+
+def install_dependencies():
+    try:
+        try:
+            import pip
+        except:
+            from subprocess import call
+            print("Installing pip... "),
+            res = call("{} -m ensurepip".format(bpy.app.binary_path_python))
+
+            if res == 0:
+                import pip
+            else:
+                raise Exception("Failed to install pip.")
+
+        print("Installing rhino3dm... "),
+
+        try:
+            from pip import main as pipmain
+        except:
+            from pip._internal import main as pipmain
+
+        res = pipmain(["install", "rhino3dm"])
+        if res > 0:
+            raise Exception("Failed to install rhino3dm.")
+    except:
+        raise Exception("Failed to install dependencies. Please make sure you have pip installed.")
+
+try:
+    import rhino3dm as r3d
+except:
+    print("Failed to load rhino3dm.")
+    install_dependencies()
+    import rhino3dm as r3d
+
 from . import converters
 
 def read_3dm(context, filepath, import_hidden, import_views, import_named_views, update_materials=False, import_hidden_layers=False):
