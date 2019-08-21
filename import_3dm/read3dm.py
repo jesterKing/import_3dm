@@ -54,8 +54,13 @@ try:
     import rhino3dm as r3d
 except:
     print("Failed to load rhino3dm.")
-    install_dependencies()
-    import rhino3dm as r3d
+    from sys import platform
+    if platform == "win32":
+        install_dependencies()
+        import rhino3dm as r3d
+    else:
+        print("Platform {} cannot automatically install dependencies.".format(platform))
+        raise
 
 from . import converters
 
