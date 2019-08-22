@@ -25,7 +25,7 @@ import rhino3dm as r3d
 from . import utils
 
 
-def handle_layers(context, model, toplayer, layerids, materials):
+def handle_layers(context, model, toplayer, layerids, materials, update):
     """
     In context read the Rhino layers from model
     then update the layerids dictionary passed in.
@@ -42,10 +42,11 @@ def handle_layers(context, model, toplayer, layerids, materials):
         matname = l.Name + "+" + str(l.Id)
         if matname not in materials:
             laymat = utils.get_iddata(context.blend_data.materials, l.Id, l.Name, None)
-            laymat.use_nodes = True
-            r, g, b, _ = l.Color
-            principled = PrincipledBSDFWrapper(laymat, is_readonly=False)
-            principled.base_color = (r/255.0, g/255.0, b/255.0)
+            if update:
+	            laymat.use_nodes = True
+	            r, g, b, _ = l.Color
+	            principled = PrincipledBSDFWrapper(laymat, is_readonly=False)
+	            principled.base_color = (r/255.0, g/255.0, b/255.0)
             materials[matname] = laymat
     # second pass so we can link layers to each other
     for l in model.Layers:

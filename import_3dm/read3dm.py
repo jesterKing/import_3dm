@@ -22,10 +22,73 @@
 
 import os.path
 import bpy
-import rhino3dm as r3d
+
+def install_dependencies():
+    import sys
+    import os
+    try:
+        try:
+            import pip
+        except:
+            from subprocess import run as sprun
+            print("Installing pip... "),
+            pyver = ""
+            if sys.platform != "win32":
+                pyver = "python{}.{}".format(
+                    sys.version_info.major,
+                    sys.version_info.minor
+                )
+
+            ensurepip = os.path.normpath(
+                os.path.join(
+                    os.path.dirname(bpy.app.binary_path_python),
+                    "..", "lib", pyver, "ensurepip"
+                )
+            )
+            res = sprun([bpy.app.binary_path_python, ensurepip])
+
+            if res.returncode == 0:
+                import pip
+            else:
+                raise Exception("Failed to install pip.")
+
+        modulespath = os.path.normpath(
+            os.path.join(
+                bpy.utils.script_path_user(),
+                "addons",
+                "modules"
+            )
+        )
+        if not os.path.exists(modulespath):
+           os.makedirs(modulespath) 
+        print("Installing rhino3dm to {}... ".format(modulespath)),
+
+        try:
+            from pip import main as pipmain
+        except:
+            from pip._internal import main as pipmain
+
+        res = pipmain(["install", "--upgrade", "--target", modulespath, "rhino3dm"])
+        if res > 0:
+            raise Exception("Failed to install rhino3dm.")
+    except:
+        raise Exception("Failed to install dependencies. Please make sure you have pip installed.")
+
+try:
+    import rhino3dm as r3d
+except:
+    print("Failed to load rhino3dm.")
+    from sys import platform
+    if platform == "win32":
+        install_dependencies()
+        import rhino3dm as r3d
+    else:
+        print("Platform {} cannot automatically install dependencies.".format(platform))
+        raise
+
 from . import converters
 
-def read_3dm(context, filepath, import_hidden, import_views, import_named_views):
+def read_3dm(context, filepath, import_hidden, import_views, import_named_views, update_materials):
     top_collection_name = os.path.splitext(os.path.basename(filepath))[0]
     if top_collection_name in context.blend_data.collections.keys():
         toplayer = context.blend_data.collections[top_collection_name]
@@ -46,9 +109,9 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views)
     if import_named_views:
         converters.handle_views(context, model, toplayer, model.NamedViews, "NamedViews", scale)
 
-    converters.handle_materials(context, model, materials)
+    converters.handle_materials(context, model, materials, update_materials)
 
-    converters.handle_layers(context, model, toplayer, layerids, materials)
+    converters.handle_layers(context, model, toplayer, layerids, materials, update_materials)
 
     for ob in model.Objects:
         og = ob.Geometry

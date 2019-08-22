@@ -24,7 +24,7 @@
 bl_info = {
     "name": "Import Rhinoceros 3D",
     "author": "Nathan 'jesterKing' Letwory, Joel Putnam, Tom Svilans",
-    "version": (0, 0, 3),
+    "version": (0, 0, 4),
     "blender": (2, 80, 0),
     "location": "File > Import > Rhinoceros 3D (.3dm)",
     "description": "This addon lets you import Rhinoceros 3dm files",
@@ -39,8 +39,6 @@ import bpy
 from bpy_extras.io_utils import ImportHelper
 from bpy.props import StringProperty, BoolProperty, EnumProperty
 from bpy.types import Operator
-
-import rhino3dm as r3d
 
 from .read3dm import read_3dm
 
@@ -68,16 +66,23 @@ class Import3dm(Operator, ImportHelper):
     )
 
     import_views: BoolProperty(
-        name="Import views.",
+        name="Import standard views.",
         description="Import standard views (Top, Front, Right, Perspective) as cameras.",
-        default=True,
+        default=False,
     )
 
     import_named_views: BoolProperty(
         name="Import named views.",
         description="Import named views as cameras.",
         default=True,
-    )       
+    )
+
+
+    update_materials: BoolProperty(
+        name="Update materials.",
+        description="Update existing materials. Otherwise, create new materials if existing ones are found.",
+        default=True,
+    )          
 
 #    type: EnumProperty(
 #        name="Example Enum",
@@ -90,8 +95,7 @@ class Import3dm(Operator, ImportHelper):
 #    )
 
     def execute(self, context):
-        return read_3dm(context, self.filepath, self.import_hidden, self.import_views, self.import_named_views)
-
+        return read_3dm(context, self.filepath, self.import_hidden, self.import_views, self.import_named_views, self.update_materials)
 
 # Only needed if you want to add into a dynamic menu
 def menu_func_import(self, context):
