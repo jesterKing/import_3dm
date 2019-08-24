@@ -119,7 +119,7 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views,
             continue
         convert_rhino_object = converters.RHINO_TYPE_TO_IMPORT[og.ObjectType]
         attr = ob.Attributes
-        if not attr.Visible:
+        if not attr.Visible and not import_hidden:
             continue
         if attr.Name == "" or attr.Name is None:
             n = str(og.ObjectType).split(".")[1]+" " + str(attr.Id)
