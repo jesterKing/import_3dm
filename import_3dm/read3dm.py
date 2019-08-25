@@ -24,27 +24,51 @@ import os.path
 import bpy
 
 def install_dependencies():
+    import sys
+    import os
     try:
         try:
             import pip
         except:
-            from subprocess import call
+            from subprocess import run as sprun
             print("Installing pip... "),
-            res = call("{} -m ensurepip".format(bpy.app.binary_path_python))
+            pyver = ""
+            if sys.platform != "win32":
+                pyver = "python{}.{}".format(
+                    sys.version_info.major,
+                    sys.version_info.minor
+                )
 
-            if res == 0:
+            ensurepip = os.path.normpath(
+                os.path.join(
+                    os.path.dirname(bpy.app.binary_path_python),
+                    "..", "lib", pyver, "ensurepip"
+                )
+            )
+            res = sprun([bpy.app.binary_path_python, ensurepip])
+
+            if res.returncode == 0:
                 import pip
             else:
                 raise Exception("Failed to install pip.")
 
-        print("Installing rhino3dm... "),
+        modulespath = os.path.normpath(
+            os.path.join(
+                bpy.utils.script_path_user(),
+                "addons",
+                "modules"
+            )
+        )
+        if not os.path.exists(modulespath):
+           os.makedirs(modulespath) 
+        print("Installing rhino3dm to {}... ".format(modulespath)),
 
         try:
             from pip import main as pipmain
         except:
             from pip._internal import main as pipmain
 
-        res = pipmain(["install", "rhino3dm"])
+        res = pipmain(["install", "--upgrade", "--target", modulespath, "rhino3dm"])
         if res > 0:
             raise Exception("Failed to install rhino3dm.")
     except:
@@ -54,8 +78,13 @@ try:
     import rhino3dm as r3d
 except:
     print("Failed to load rhino3dm.")
-    install_dependencies()
-    import rhino3dm as r3d
+    from sys import platform
+    if platform == "win32":
+        install_dependencies()
+        import rhino3dm as r3d
+    else:
+        print("Platform {} cannot automatically install dependencies.".format(platform))
+        raise
 
 from . import converters
 
