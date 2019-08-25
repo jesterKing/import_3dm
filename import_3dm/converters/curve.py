@@ -45,6 +45,8 @@ def import_polyline(rcurve, bcurve, scale):
     polyline = bcurve.splines.new('POLY')
 
     polyline.use_cyclic_u = rcurve.IsClosed
+    if rcurve.IsClosed:
+        N -= 1
 
     polyline.points.add(N - 1)
     for i in range(0, N):
@@ -85,9 +87,14 @@ CONVERT = {
 def import_polycurve(rcurve, bcurve, scale):
     return
 
+    ncurve = rcurve.ToNurbsCurve()
+    return import_nurbs_curve(ncurve, bcurve, scale)
+
+    '''
     for seg in rcurve.segments:
         if type(seg) in CONVERT.keys():
             CONVERT[type(seg)](seg, bcurve, scale)
+    '''
 
 CONVERT[r3d.Polycurve] = import_polycurve
 
@@ -101,8 +108,6 @@ def import_curve(og,context, n, Name, Id, layer, rhinomat, scale):
 
     CONVERT[type(og)](og, curve_data, scale)
 
-    #print("Curve type: {}".format(speckle_curve["type"]))
-
     add_curve(context, n, Name, Id, curve_data, layer, rhinomat)
 
 def add_curve(context, name, origname, id, cdata, layer, rhinomat):
@@ -110,6 +115,7 @@ def add_curve(context, name, origname, id, cdata, layer, rhinomat):
     cdata.materials.append(rhinomat)
 
     ob = utils.get_iddata(context.blend_data.objects, id, origname, cdata)
+
     # Rhino data is all in world space, so add object at 0,0,0
     ob.location = (0.0, 0.0, 0.0)
     try:
