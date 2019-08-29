@@ -88,7 +88,7 @@ except:
 
 from . import converters
 
-def read_3dm(context, filepath, import_hidden, import_views, import_named_views, update_materials):
+def read_3dm(context, filepath, import_hidden, import_views, import_named_views, update_materials=False, import_hidden_layers=False):
     top_collection_name = os.path.splitext(os.path.basename(filepath))[0]
     if top_collection_name in context.blend_data.collections.keys():
         toplayer = context.blend_data.collections[top_collection_name]
@@ -111,7 +111,7 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views,
 
     converters.handle_materials(context, model, materials, update_materials)
 
-    converters.handle_layers(context, model, toplayer, layerids, materials, update_materials)
+    converters.handle_layers(context, model, toplayer, layerids, materials, update_materials, import_hidden_layers)
 
     for ob in model.Objects:
         og = ob.Geometry
@@ -130,6 +130,10 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views,
             rhinolayer = model.Layers[attr.LayerIndex]
         else:
             rhinolayer = model.Layers[0]
+
+        if not rhinolayer.Visible and not import_hidden_layers:
+            print("Skipping hidden layer again.")
+            continue
 
         matname = None
         if attr.MaterialIndex != -1:
