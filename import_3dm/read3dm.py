@@ -26,6 +26,20 @@ import bpy
 def install_dependencies():
     import sys
     import os
+
+    # set up addons/modules under the user
+    # script path. Here we'll install the
+    # dependencies
+    modulespath = os.path.normpath(
+        os.path.join(
+            bpy.utils.script_path_user(),
+            "addons",
+            "modules"
+        )
+    )
+    if not os.path.exists(modulespath):
+        os.makedirs(modulespath) 
+    
     try:
         try:
             import pip
@@ -45,22 +59,13 @@ def install_dependencies():
                     "..", "lib", pyver, "ensurepip"
                 )
             )
-            res = sprun([bpy.app.binary_path_python, ensurepip])
+            res = sprun([bpy.app.binary_path_python, ensurepip, "--root", modulespath])
 
             if res.returncode == 0:
                 import pip
             else:
                 raise Exception("Failed to install pip.")
 
-        modulespath = os.path.normpath(
-            os.path.join(
-                bpy.utils.script_path_user(),
-                "addons",
-                "modules"
-            )
-        )
-        if not os.path.exists(modulespath):
-           os.makedirs(modulespath) 
         print("Installing rhino3dm to {}... ".format(modulespath)),
 
         try:
@@ -74,17 +79,14 @@ def install_dependencies():
     except:
         raise Exception("Failed to install dependencies. Please make sure you have pip installed.")
 
+# TODO: add update mechanism
 try:
     import rhino3dm as r3d
 except:
     print("Failed to load rhino3dm.")
     from sys import platform
-    if platform == "win32":
-        install_dependencies()
-        import rhino3dm as r3d
-    else:
-        print("Platform {} cannot automatically install dependencies.".format(platform))
-        raise
+    install_dependencies()
+    import rhino3dm as r3d
 
 from . import converters
 
