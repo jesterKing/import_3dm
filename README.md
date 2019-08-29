@@ -12,8 +12,9 @@ This code is currently being written directly for Blender 2.80, even though it i
 The add-on will automatically install all dependencies in user-writable locations.
 
 Installation
-=======================
+============
 
+* Note on MacOS some preparations need to be done, see next section
 * Start Blender 2.80
 * In top menu press Edit > User Preferences...
 * Select the section Add-ons
@@ -23,3 +24,17 @@ Installation
 * Restart Blender.
 
 If you just now downloaded Blender 2.80 you can either use the operator search menu by pressing F3, or through File > Import.
+
+Preparation steps MacOS
+=======================
+* Blender 2.80 installed in Applications. For newer versions adapt the path according version
+* open a terminal
+* type `cd /Applications/Blender.app/Contents/Resources/2.80/python`
+    * first we remove the old pip in the site-packages (if any):
+      * `rm -rf ./lib/python3.7/site-packages/pip*`
+    * now we install `pip3.7`
+      * `./bin/python3.7m ./lib/python3.7/ensurepip`
+    * check `pip3.7` (and `pip3`) are installed in the expected location
+      * `ls ./bin`
+      * ensure listing gives `pip3`
+    * you should now be ready to install the `import_3dm` add-on as per instructions in the `Installation` section.

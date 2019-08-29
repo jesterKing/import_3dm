@@ -85,11 +85,22 @@ def install_dependencies():
         # we can add here something like "==0.0.5".
         # for now assume latest available is ok
         rhino3dm_version=""
+
+        pip3 = "pip3"
+        if sys.platform=="darwin":
+            pip3 = os.path.normpath(
+                os.path.join(
+                os.path.dirname(bpy.app.binary_path_python),
+                "..",
+                "bin",
+                pip3
+                )
+            )
             
         # call pip in a subprocess so we don't have to mess
         # with internals. Also, this ensures the Python used to
         # install pip is going to be used
-        res = sprun(["pip3", "install", "--upgrade", "--target", modulespath, "rhino3dm{}".format(rhino3dm_version)])
+        res = sprun([pip3, "install", "--upgrade", "--target", modulespath, "rhino3dm{}".format(rhino3dm_version)])
         if res.returncode!=0:
             print("Please try manually installing rhino3dm with: pip3 install --upgrade --target {} rhino3dm".format(modulespath))
             raise Exception("Failed to install rhino3dm. See console for manual install instruction.")
