@@ -19,6 +19,7 @@ Installation
 * Select the section Add-ons
 * In the bottom of that window select Install add-on from file...
 * Browse to where you saved the zip file, select it and press the Install add-on from file button in the top right of the file browser
-* Done. Probably a good idea to restart Blender.
+* There may be exceptions and warnings, look in the output to see if you need to do anything (note: on Linux you'll most likely will have to run the pip installation manually. The terminal will have the line to run)
+* Restart Blender.
 
 If you just now downloaded Blender 2.80 you can either use the operator search menu by pressing F3, or through File > Import.
