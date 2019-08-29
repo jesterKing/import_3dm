@@ -59,7 +59,7 @@ def install_dependencies():
                     "..", "lib", pyver, "ensurepip"
                 )
             )
-            res = sprun([bpy.app.binary_path_python, ensurepip, "--root", modulespath])
+            res = sprun([bpy.app.binary_path_python, ensurepip, "--user"])
 
             if res.returncode == 0:
                 import pip
