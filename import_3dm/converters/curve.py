@@ -24,6 +24,7 @@
 import rhino3dm as r3d
 from  . import utils
 
+from mathutils import Vector
 
 def import_line(rcurve, bcurve, scale):
 
@@ -71,7 +72,62 @@ def import_nurbs_curve(rcurve, bcurve, scale):
     nurbs.use_endpoint_u = True
     nurbs.order_u = rcurve.Order
             
-    return nurbs        
+    return nurbs
+
+
+def import_arc(rcurve, bcurve, scale):
+
+    spt = Vector((rcurve.Arc.StartPoint.X, rcurve.Arc.StartPoint.Y, rcurve.Arc.StartPoint.Z)) * scale
+    ept = Vector((rcurve.Arc.EndPoint.X, rcurve.Arc.EndPoint.Y, rcurve.Arc.EndPoint.Z)) * scale
+    cpt = Vector((rcurve.Arc.Center.X, rcurve.Arc.Center.Y, rcurve.Arc.Center.Z)) * scale
+
+    r1 = spt - cpt
+    r2 = ept - cpt
+
+    r1.normalize()
+    r2.normalize()
+
+    d = rcurve.Arc.Length * scale
+
+    print(r1)
+    print(r2)
+
+    normal = r1.cross(r2)
+
+    t1 = normal.cross(r1)
+    t2 = normal.cross(r2)
+
+    '''
+    Temporary arc
+    '''
+    arc = bcurve.splines.new('NURBS')
+
+    arc.use_cyclic_u = False
+
+    arc.points.add(3)
+
+    arc.points[0].co = (spt.x, spt.y, spt.z, 1)
+
+    sspt = spt + t1 * d * 0.33
+    arc.points[1].co = (sspt.x, sspt.y, sspt.z, 1)
+
+    eept = ept - t2 * d * 0.33
+    arc.points[2].co = (eept.x, eept.y, eept.z, 1)
+
+    arc.points[3].co = (ept.x, ept.y, ept.z, 1)
+
+    '''
+    print("ARC")
+    print("   StartPoint:", rcurve.Arc.StartPoint)
+    print("      EndPoint:", rcurve.Arc.EndPoint)
+    print("        Center:", rcurve.Arc.Center)
+    print("        Radius:", rcurve.Radius)
+    '''
+
+    arc.use_endpoint_u = True
+    arc.order_u = 3    
+
+    return arc  
 
 def import_null(rcurve, bcurve, scale):
     print("Failed to convert type", type(rcurve))
@@ -81,22 +137,19 @@ CONVERT = {
     r3d.NurbsCurve: import_nurbs_curve,
     r3d.LineCurve: import_line,
     r3d.Polylinecurve: import_polyline,
-    r3d.ArcCurve:import_null
+    r3d.ArcCurve:import_arc
 }
 
 def import_polycurve(rcurve, bcurve, scale):
-    return
 
-    ncurve = rcurve.ToNurbsCurve()
-    return import_nurbs_curve(ncurve, bcurve, scale)
+    for seg in range(rcurve.SegmentCount):
+        segcurve = rcurve.SegmentCurve(seg)
+        if type(segcurve) in CONVERT.keys():
+            CONVERT[type(segcurve)](segcurve, bcurve, scale)
 
-    '''
-    for seg in rcurve.segments:
-        if type(seg) in CONVERT.keys():
-            CONVERT[type(seg)](seg, bcurve, scale)
-    '''
 
-CONVERT[r3d.Polycurve] = import_polycurve
+
+CONVERT[r3d.PolyCurve] = import_polycurve
 
 
 def import_curve(og,context, n, Name, Id, layer, rhinomat, scale):
