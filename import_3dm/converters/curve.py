@@ -89,9 +89,6 @@ def import_arc(rcurve, bcurve, scale):
 
     d = rcurve.Arc.Length * scale
 
-    print(r1)
-    print(r2)
-
     normal = r1.cross(r2)
 
     t1 = normal.cross(r1)
