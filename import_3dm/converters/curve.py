@@ -26,6 +26,13 @@ from  . import utils
 
 from mathutils import Vector
 
+CONVERT = {}
+
+def import_null(rcurve, bcurve, scale):
+
+    print("Failed to convert type", type(rcurve))
+    return None
+
 def import_line(rcurve, bcurve, scale):
 
     fr = rcurve.Line.From
@@ -38,6 +45,8 @@ def import_line(rcurve, bcurve, scale):
     line.points[1].co = (to.X * scale, to.Y * scale, to.Z * scale, 1)
 
     return line
+
+CONVERT[r3d.LineCurve] = import_line
 
 def import_polyline(rcurve, bcurve, scale):
 
@@ -55,6 +64,8 @@ def import_polyline(rcurve, bcurve, scale):
         polyline.points[i].co = (rpt.X * scale, rpt.Y * scale, rpt.Z * scale, 1)
 
     return polyline
+
+CONVERT[r3d.Polylinecurve] = import_polyline
 
 def import_nurbs_curve(rcurve, bcurve, scale):
 
@@ -74,6 +85,7 @@ def import_nurbs_curve(rcurve, bcurve, scale):
             
     return nurbs
 
+CONVERT[r3d.NurbsCurve] = import_nurbs_curve
 
 def import_arc(rcurve, bcurve, scale):
 
@@ -124,18 +136,7 @@ def import_arc(rcurve, bcurve, scale):
     arc.use_endpoint_u = True
     arc.order_u = 3    
 
-    return arc  
-
-def import_null(rcurve, bcurve, scale):
-    print("Failed to convert type", type(rcurve))
-    return None
-
-CONVERT = {
-    r3d.NurbsCurve: import_nurbs_curve,
-    r3d.LineCurve: import_line,
-    r3d.Polylinecurve: import_polyline,
-    r3d.ArcCurve:import_arc
-}
+    return arc
 
 def import_polycurve(rcurve, bcurve, scale):
 
@@ -144,21 +145,20 @@ def import_polycurve(rcurve, bcurve, scale):
         if type(segcurve) in CONVERT.keys():
             CONVERT[type(segcurve)](segcurve, bcurve, scale)
 
-
-
 CONVERT[r3d.PolyCurve] = import_polycurve
-
 
 def import_curve(og,context, n, Name, Id, layer, rhinomat, scale):
 
-    curve_data = context.blend_data.curves.new(Name, type="CURVE")
+    if type(og) in CONVERT.keys():
 
-    curve_data.dimensions = '3D'
-    curve_data.resolution_u = 2
+        curve_data = context.blend_data.curves.new(Name, type="CURVE")
 
-    CONVERT[type(og)](og, curve_data, scale)
+        curve_data.dimensions = '3D'
+        curve_data.resolution_u = 2
 
-    add_curve(context, n, Name, Id, curve_data, layer, rhinomat)
+        CONVERT[type(og)](og, curve_data, scale)
+
+        add_curve(context, n, Name, Id, curve_data, layer, rhinomat)
 
 def add_curve(context, name, origname, id, cdata, layer, rhinomat):
 
