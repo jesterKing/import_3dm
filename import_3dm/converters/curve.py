@@ -138,6 +138,8 @@ def import_arc(rcurve, bcurve, scale):
 
     return arc
 
+CONVERT[r3d.ArcCurve] = import_arc
+
 def import_polycurve(rcurve, bcurve, scale):
 
     for seg in range(rcurve.SegmentCount):
