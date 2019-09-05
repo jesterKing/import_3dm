@@ -96,7 +96,7 @@ def import_polycurve(rcurve, bcurve, scale):
             CONVERT[type(seg)](seg, bcurve, scale)
     '''
 
-CONVERT[r3d.Polycurve] = import_polycurve
+CONVERT[r3d.PolyCurve] = import_polycurve
 
 
 def import_curve(og,context, n, Name, Id, layer, rhinomat, scale):
