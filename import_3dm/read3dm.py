@@ -38,7 +38,7 @@ def modules_path():
         )
     )
     if not os.path.exists(modulespath):
-        os.makedirs(modulespath) 
+        os.makedirs(modulespath)
 
     # set user modules path at beginning of paths for earlier hit
     if sys.path[1] != modulespath:
@@ -50,7 +50,7 @@ modules_path()
 
 def install_dependencies():
     modulespath = modules_path()
-    
+
     try:
         from subprocess import run as sprun
         try:
@@ -96,7 +96,7 @@ def install_dependencies():
                 pip3
                 )
             )
-            
+
         # call pip in a subprocess so we don't have to mess
         # with internals. Also, this ensures the Python used to
         # install pip is going to be used
@@ -106,7 +106,7 @@ def install_dependencies():
             raise Exception("Failed to install rhino3dm. See console for manual install instruction.")
     except:
         raise Exception("Failed to install dependencies. Please make sure you have pip installed.")
-    
+
 
 # TODO: add update mechanism
 try:
@@ -124,7 +124,7 @@ except:
 
 from . import converters
 
-def read_3dm(context, filepath, import_hidden, import_views, import_named_views, update_materials=False, import_hidden_layers=False):
+def read_3dm(context, filepath, import_hidden, import_views, import_named_views, import_groups, import_nested_groups, update_materials=False, import_hidden_layers=False):
     top_collection_name = os.path.splitext(os.path.basename(filepath))[0]
     if top_collection_name in context.blend_data.collections.keys():
         toplayer = context.blend_data.collections[top_collection_name]
@@ -132,10 +132,10 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views,
         toplayer = context.blend_data.collections.new(name=top_collection_name)
 
     model = r3d.File3dm.Read(filepath)
-    
+
     # Get proper scale for conversion
-    scale = r3d.UnitSystem.UnitScale(model.Settings.ModelUnitSystem, r3d.UnitSystem.Meters) / context.scene.unit_settings.scale_length    
-    
+    scale = r3d.UnitSystem.UnitScale(model.Settings.ModelUnitSystem, r3d.UnitSystem.Meters) / context.scene.unit_settings.scale_length
+
     layerids = {}
     materials = {}
 
@@ -184,6 +184,17 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views,
         layer = layerids[str(layeruuid)][1]
 
         convert_rhino_object(og, context, n, attr.Name, attr.Id, layer, rhinomat, scale)
+
+
+        #last_obj=context.active_object #doesnt work for whatever reason (not linked to scene yet??)
+        #fetch last created oject by its r3d guid
+        try:
+            last_obj=[obj for obj in context.blend_data.objects if obj.get('rhid', None) == str(attr.Id)]
+        except Exception:
+            return
+
+        if import_groups:
+            converters.handle_groups(context,attr,toplayer,last_obj[0],import_nested_groups)
 
     # finally link in the container collection (top layer) into the main
     # scene collection.

@@ -69,7 +69,7 @@ class Import3dm(Operator, ImportHelper):
         name="Import Hidden Layers",
         description="Import Hidden Layers",
         default=True,
-    )    
+    )
 
     import_views: BoolProperty(
         name="Import standard views.",
@@ -83,12 +83,24 @@ class Import3dm(Operator, ImportHelper):
         default=True,
     )
 
+    import_groups: BoolProperty(
+        name="Import groups.",
+        description="Import groups as collections.",
+        default=True,
+    )
+
+    import_nested_groups: BoolProperty(
+        name="handle nested groups.",
+        description="Recreate nested group hierarchy as collections.",
+        default=False,
+    )
+
 
     update_materials: BoolProperty(
         name="Update materials.",
         description="Update existing materials. Otherwise, create new materials if existing ones are found.",
         default=True,
-    )          
+    )
 
 #    type: EnumProperty(
 #        name="Example Enum",
@@ -101,7 +113,7 @@ class Import3dm(Operator, ImportHelper):
 #    )
 
     def execute(self, context):
-        return read_3dm(context, self.filepath, self.import_hidden, self.import_views, self.import_named_views, self.update_materials, self.import_hidden_layers)
+        return read_3dm(context, self.filepath, self.import_hidden, self.import_views, self.import_named_views, self.import_groups, self.import_nested_groups, self.update_materials, self.import_hidden_layers)
 
 # Only needed if you want to add into a dynamic menu
 def menu_func_import(self, context):
