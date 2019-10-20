@@ -27,6 +27,7 @@ from .layers import handle_layers
 from .render_mesh import import_render_mesh
 from .curve import import_curve
 from .views import handle_views
+from .instances import handle_instances
 
 '''
 Dictionary mapping between the Rhino file types and importer functions

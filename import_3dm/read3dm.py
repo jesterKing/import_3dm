@@ -132,7 +132,7 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views,
         toplayer = context.blend_data.collections.new(name=top_collection_name)
 
     model = r3d.File3dm.Read(filepath)
-    
+    #print(model)
     # Get proper scale for conversion
     scale = r3d.UnitSystem.UnitScale(model.Settings.ModelUnitSystem, r3d.UnitSystem.Meters) / context.scene.unit_settings.scale_length    
     
@@ -185,6 +185,13 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views,
 
         convert_rhino_object(og, context, n, attr.Name, attr.Id, layer, rhinomat, scale)
 
+
+    
+    import_instances=True
+    if import_instances:
+        converters.handle_instances(context, model, toplayer, scale)
+    
+        
     # finally link in the container collection (top layer) into the main
     # scene collection.
     try:
