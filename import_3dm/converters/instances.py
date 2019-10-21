@@ -36,8 +36,10 @@ def create_proxy(model, context, idef_obj, idef_col, scale):
     proxy.empty_display_size=1
     proxy.empty_display_type='PLAIN_AXES'
     proxy.instance_type='COLLECTION'
-    proxy.name = model.InstanceDefinitions.FindId(idef_obj.Geometry.ParentIdefId).Name
-    proxy_collection = context.blend_data.collections[proxy.name]
+
+    idef_name = model.InstanceDefinitions.FindId(idef_obj.Geometry.ParentIdefId).Name
+    proxy.name=idef_name
+    proxy_collection = context.blend_data.collections[idef_name]
     proxy.instance_collection=proxy_collection
     xform=idef_obj.Geometry.Xform.ToFloatArray()
     xform[:,3:]=xform[:,3:]*scale #adjust translational part of matrix for scale
