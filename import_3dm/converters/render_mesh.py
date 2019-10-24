@@ -41,10 +41,14 @@ def add_object(context, name, origname, id, verts, faces, layer, rhinomat):
         pass
 
 
-def import_render_mesh(og, context, n, Name, Id, layer, rhinomat, scale):
+def import_render_mesh(ob, context, n, layer, rhinomat, scale):
     # concatenate all meshes from all (brep) faces,
     # adjust vertex indices for faces accordingly
     # first get all render meshes
+    og=ob.Geometry
+    Name=ob.Attributes.Name
+    Id=ob.Attributes.Id
+
     if og.ObjectType == r3d.ObjectType.Extrusion:
         msh = [og.GetMesh(r3d.MeshType.Any)]
     elif og.ObjectType == r3d.ObjectType.Mesh:

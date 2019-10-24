@@ -27,89 +27,73 @@ from . import utils
 
 
 #TODO
-#implement blender side (collections, collection instances, applying transformations to instances)
+#tag collections and references with guids
 #test w/ more complex blocks and empty blocks
-#exception handling
+#proper exception handling
 
-def create_proxy(model, context, idef_obj, idef_col, scale):
-    proxy = bpy.data.objects.new('empty', None)
-    proxy.empty_display_size=1
-    proxy.empty_display_type='PLAIN_AXES'
-    proxy.instance_type='COLLECTION'
-
-    idef_name = model.InstanceDefinitions.FindId(idef_obj.Geometry.ParentIdefId).Name
-    proxy.name=idef_name
-    proxy_collection = context.blend_data.collections[idef_name]
-    proxy.instance_collection=proxy_collection
-    xform=idef_obj.Geometry.Xform.ToFloatArray()
-    xform[:,3:]=xform[:,3:]*scale #adjust translational part of matrix for scale
-    xform=xform.tolist()
-    proxy.matrix_world = Matrix(xform)
-                            
-    #try to link proxy into instance definition
-    try:
-        idef_col.objects.link(proxy)
-    except Exception:
-        pass
-            
-
-
-def handle_instances(context, model, toplayer, scale):
+    
+def handle_instance_definitions(context, model, toplayer, layername, scale):
     """
-    import instance definitions from rhino model as collections and recreate hierarchy of (possibly nested) instances
+    import instance definitions from rhino model as collections and recreate hierarchy of instances
     using collections and collection instances
     """
   
-    #get all relevant objects and definitions
-    idef_geometry=[obj for obj in model.Objects if obj.Attributes.IsInstanceDefinitionObject]
-    irefs=[obj for obj in model.Objects if obj.Geometry.ObjectType==r3d.ObjectType.InstanceReference]
+    if not layername in context.blend_data.collections:
+            instance_col = context.blend_data.collections.new(name=layername)
+            toplayer.children.link(instance_col)
 
-    #if theres still no main collection to hold all groups, create one and link it to toplayer
-    instances_col_id= "Instance Definitions"
-    if not instances_col_id in context.blend_data.collections:
-            instances_col = context.blend_data.collections.new(name=instances_col_id)
-            toplayer.children.link(instances_col)
-
-    #build hierarchy by crossreferencing guids
-    idef_dict={}
     for idef in model.InstanceDefinitions:
-        idef_dict[idef]=[obj for obj in idef_geometry if obj.Attributes.Id in idef.GetObjectIds()]
 
-    idef=None
-
-    #loop through instance definitions and link objects from scene 
-    for idef in idef_dict:
-        #TODO: tag idef collections with guid to recognize on reimport
-
-        #if the instance definition doesnt exist yet, create it and link it to the main collection
+        #TODO: tag collection with idef guid
         if not idef.Name in context.blend_data.collections:
             idef_col = context.blend_data.collections.new(name=idef.Name)
         else:
             idef_col = context.blend_data.collections[idef.Name]
+            utils.tag_data(idef_col, idef.Id, idef.Name)
 
         try:
-            instances_col.children.link(idef_col)
+            instance_col.children.link(idef_col)
         except Exception:
             pass
 
-        #loop through the child objects of the current instance definition
-        for idef_obj in idef_dict[idef]:
-            #if we find an instance reference inside the block definition create an empty and setup the instance
-            if idef_obj.Geometry.ObjectType == r3d.ObjectType.InstanceReference:
-                create_proxy(model, context, idef_obj, idef_col, scale)
+def import_instance_reference(ob, context, n, layer, rhinomat, scale):
+    #add an empty and set it up as a collection instance pointing to the collection given in "n"
+    iref = bpy.data.objects.new('empty', None)
+    iref.empty_display_size=1
+    iref.empty_display_type='PLAIN_AXES'
+    iref.instance_type='COLLECTION'
+    iref.name=n
+    iref.instance_collection = context.blend_data.collections[n]
+    xform=list(ob.Geometry.Xform.ToFloatArray(1))
+    xform=[xform[0:4],xform[4:8], xform[8:12], xform[12:16]]
+    xform[0][3]*=scale 
+    xform[1][3]*=scale 
+    xform[2][3]*=scale 
+    iref.matrix_world = Matrix(xform)
+    utils.tag_data(iref, ob.Attributes.Id, ob.Attributes.Name)
+                            
+    #try to link iref into parent layer
+    try:
+        layer.objects.link(iref)
+    except Exception:
+        pass
 
-            #otherwise find objects by their guid, unlink them anywhere else ad link them to the idef
-            else:
-                children=[obj for obj in context.blend_data.objects if obj.get('rhid', None) == str(idef_obj.Attributes.Id)]
+def populate_instance_definitions(context, model, toplayer, layername):
+    #for every instance definition fish out the instance definition objects and link them to their parent collection
+    #this has to be done AFTER all
+    for idef in model.InstanceDefinitions:
+        #TODO: change this method! in a very large file this would loop through all objects for every single instance definition, possibly taking forever
+        for ob in model.Objects:
+            if ob.Attributes.Id in idef.GetObjectIds():
+                children=[o for o in context.blend_data.objects if o.get('rhid', None) == str(ob.Attributes.Id)]
+                print(children)
+                #hen or egg guid'ed objects or instances!?
                 for c in children:
                     try:
-                        idef_col.objects.link(c)
+                        context.blend_data.collections[idef.Name].objects.link(c)
                     except Exception:
                         pass
 
-  
-    for ref in irefs:
-        if not ref.Attributes.IsInstanceDefinitionObject:
-            create_proxy(model, context, ref, toplayer, scale)
+
 
 

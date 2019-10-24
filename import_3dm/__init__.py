@@ -83,7 +83,6 @@ class Import3dm(Operator, ImportHelper):
         default=True,
     )
 
-
     update_materials: BoolProperty(
         name="Update materials.",
         description="Update existing materials. Otherwise, create new materials if existing ones are found.",

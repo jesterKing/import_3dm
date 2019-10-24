@@ -27,7 +27,7 @@ from .layers import handle_layers
 from .render_mesh import import_render_mesh
 from .curve import import_curve
 from .views import handle_views
-from .instances import handle_instances
+from .instances import *
 
 '''
 Dictionary mapping between the Rhino file types and importer functions
@@ -37,5 +37,6 @@ RHINO_TYPE_TO_IMPORT = {
     r3d.ObjectType.Brep : import_render_mesh,
     r3d.ObjectType.Extrusion : import_render_mesh,
     r3d.ObjectType.Mesh : import_render_mesh,
-    r3d.ObjectType.Curve : import_curve
+    r3d.ObjectType.Curve : import_curve,
+    r3d.ObjectType.InstanceReference : import_instance_reference
 }

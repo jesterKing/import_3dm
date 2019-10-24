@@ -144,10 +144,12 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views,
         converters.handle_views(context, model, toplayer, model.Views, "Views", scale)
     if import_named_views:
         converters.handle_views(context, model, toplayer, model.NamedViews, "NamedViews", scale)
-
+    
     converters.handle_materials(context, model, materials, update_materials)
 
     converters.handle_layers(context, model, toplayer, layerids, materials, update_materials, import_hidden_layers)
+
+    converters.handle_instance_definitions(context, model, toplayer, "Instance Definitions",scale) 
 
     for ob in model.Objects:
         og = ob.Geometry
@@ -161,6 +163,9 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views,
             n = str(og.ObjectType).split(".")[1]+" " + str(attr.Id)
         else:
             n = attr.Name
+
+        if og.ObjectType==r3d.ObjectType.InstanceReference:
+            n= model.InstanceDefinitions.FindId(og.ParentIdefId).Name
 
         if attr.LayerIndex != -1:
             rhinolayer = model.Layers[attr.LayerIndex]
@@ -183,14 +188,12 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views,
             rhinomat = materials[rhinomatname]
         layer = layerids[str(layeruuid)][1]
 
-        convert_rhino_object(og, context, n, attr.Name, attr.Id, layer, rhinomat, scale)
-
-
-    
-    import_instances=True
-    if import_instances:
-        converters.handle_instances(context, model, toplayer, scale)
-    
+        print(n)
+        convert_rhino_object(ob, context, n, layer, rhinomat, scale)
+  
+   
+    #after importing all objects, fish out instance definition objects
+    converters.populate_instance_definitions(context, model, toplayer, "Instance Definitions")
         
     # finally link in the container collection (top layer) into the main
     # scene collection.
