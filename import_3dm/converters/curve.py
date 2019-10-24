@@ -149,7 +149,7 @@ def import_polycurve(rcurve, bcurve, scale):
 
 CONVERT[r3d.PolyCurve] = import_polycurve
 
-def import_curve(ob,context, n, layer, rhinomat, scale):
+def import_curve(ob,context, n, layer, rhinomat, scale, option):
     og=ob.Geometry
     Name=ob.Attributes.Name
     Id=ob.Attributes.Id

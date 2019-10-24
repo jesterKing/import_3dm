@@ -124,7 +124,7 @@ except:
 
 from . import converters
 
-def read_3dm(context, filepath, import_hidden, import_views, import_named_views, update_materials=False, import_hidden_layers=False):
+def read_3dm(context, filepath, import_hidden, import_views, import_named_views, import_instances, update_materials=False, import_hidden_layers=False):
     top_collection_name = os.path.splitext(os.path.basename(filepath))[0]
     if top_collection_name in context.blend_data.collections.keys():
         toplayer = context.blend_data.collections[top_collection_name]
@@ -132,12 +132,12 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views,
         toplayer = context.blend_data.collections.new(name=top_collection_name)
 
     model = r3d.File3dm.Read(filepath)
-    #print(model)
     # Get proper scale for conversion
     scale = r3d.UnitSystem.UnitScale(model.Settings.ModelUnitSystem, r3d.UnitSystem.Meters) / context.scene.unit_settings.scale_length    
     
     layerids = {}
     materials = {}
+    import_option=True
 
     # Import Views and NamedViews
     if import_views:
@@ -149,7 +149,8 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views,
 
     converters.handle_layers(context, model, toplayer, layerids, materials, update_materials, import_hidden_layers)
 
-    converters.handle_instance_definitions(context, model, toplayer, "Instance Definitions",scale) 
+    if import_instances:
+        converters.handle_instance_definitions(context, model, toplayer, "Instance Definitions",scale) 
 
     for ob in model.Objects:
         og = ob.Geometry
@@ -166,6 +167,7 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views,
 
         if og.ObjectType==r3d.ObjectType.InstanceReference:
             n= model.InstanceDefinitions.FindId(og.ParentIdefId).Name
+            import_option = import_instances
 
         if attr.LayerIndex != -1:
             rhinolayer = model.Layers[attr.LayerIndex]
@@ -189,11 +191,12 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views,
         layer = layerids[str(layeruuid)][1]
 
         print(n)
-        convert_rhino_object(ob, context, n, layer, rhinomat, scale)
+        convert_rhino_object(ob, context, n, layer, rhinomat, scale, import_option)
   
    
     #after importing all objects, fish out instance definition objects
-    converters.populate_instance_definitions(context, model, toplayer, "Instance Definitions")
+    if import_instances:
+        converters.populate_instance_definitions(context, model, toplayer, "Instance Definitions")
         
     # finally link in the container collection (top layer) into the main
     # scene collection.
