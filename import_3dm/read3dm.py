@@ -148,6 +148,7 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views,
     converters.handle_materials(context, model, materials, update_materials)
 
     converters.handle_layers(context, model, toplayer, layerids, materials, update_materials, import_hidden_layers)
+    materials[converters.material.DEFAULT_RHINO_MATERIAL] = None
 
     for ob in model.Objects:
         og = ob.Geometry
@@ -162,26 +163,30 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views,
         else:
             n = attr.Name
 
-        if attr.LayerIndex != -1:
-            rhinolayer = model.Layers[attr.LayerIndex]
-        else:
-            rhinolayer = model.Layers[0]
+        rhinolayer = model.Layers.FindIndex(attr.LayerIndex)
+
 
         if not rhinolayer.Visible and not import_hidden_layers:
-            print("Skipping hidden layer again.")
             continue
 
-        matname = None
-        if attr.MaterialIndex != -1:
-            matname = converters.material_name(model.Materials[attr.MaterialIndex])
+        # Get render material
+        mat_index = ob.Attributes.MaterialIndex
 
-        layeruuid = rhinolayer.Id
-        rhinomatname = rhinolayer.Name + "+" + str(layeruuid)
-        if matname:
-            rhinomat = materials[matname]
+        if ob.Attributes.MaterialSource == r3d.ObjectMaterialSource.MaterialFromLayer:
+            mat_index = rhinolayer.RenderMaterialIndex
+
+        rhino_material = model.Materials.FindIndex(mat_index)
+
+        # Handle default material and fetch associated Blender material
+        if rhino_material.Name == "":
+            matname = converters.material.DEFAULT_RHINO_MATERIAL
         else:
-            rhinomat = materials[rhinomatname]
-        layer = layerids[str(layeruuid)][1]
+            matname = converters.material_name(rhino_material)
+
+        rhinomat = materials[matname]
+
+        # Fetch layer
+        layer = layerids[str(rhinolayer.Id)][1]
 
         convert_rhino_object(og, context, n, attr.Name, attr.Id, layer, rhinomat, scale)
 
