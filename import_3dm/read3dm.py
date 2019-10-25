@@ -124,20 +124,36 @@ except:
 
 from . import converters
 
-def read_3dm(context, filepath, import_hidden, import_views, import_named_views, update_materials=False, import_hidden_layers=False):
+def read_3dm(context, options):
+
+    filepath = options.get("filepath", "")
+    model = None
+
+    try:
+        model = r3d.File3dm.Read(filepath)
+    except:
+        print("Failed to import .3dm model: {}".format(filepath))
+        return {'CANCELLED'}
+
     top_collection_name = os.path.splitext(os.path.basename(filepath))[0]
     if top_collection_name in context.blend_data.collections.keys():
         toplayer = context.blend_data.collections[top_collection_name]
     else:
         toplayer = context.blend_data.collections.new(name=top_collection_name)
 
-    model = r3d.File3dm.Read(filepath)
-    
     # Get proper scale for conversion
     scale = r3d.UnitSystem.UnitScale(model.Settings.ModelUnitSystem, r3d.UnitSystem.Meters) / context.scene.unit_settings.scale_length    
     
     layerids = {}
     materials = {}
+
+    # Parse options
+    import_views = options.get("import_views", False)
+    import_named_views = options.get("import_named_views", False)
+    import_hidden_objects = options.get("import_hidden_objects", False)
+    import_hidden_layers = options.get("import_hidden_layers", False)
+    update_materials = options.get("update_materials", False)
+
 
     # Import Views and NamedViews
     if import_views:
@@ -145,10 +161,13 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views,
     if import_named_views:
         converters.handle_views(context, model, toplayer, model.NamedViews, "NamedViews", scale)
 
+    # Handle materials
     converters.handle_materials(context, model, materials, update_materials)
 
+    # Handle layers
     converters.handle_layers(context, model, toplayer, layerids, materials, update_materials, import_hidden_layers)
 
+    # Handle objects
     for ob in model.Objects:
         og = ob.Geometry
         if og.ObjectType not in converters.RHINO_TYPE_TO_IMPORT:
@@ -168,7 +187,7 @@ def read_3dm(context, filepath, import_hidden, import_views, import_named_views,
             rhinolayer = model.Layers[0]
 
         if not rhinolayer.Visible and not import_hidden_layers:
-            print("Skipping hidden layer again.")
+            #print("Skipping hidden layer again.")
             continue
 
         matname = None
