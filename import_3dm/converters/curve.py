@@ -127,7 +127,7 @@ def import_arc(rcurve, bcurve, scale):
 
     '''
     print("ARC")
-    print("   StartPoint:", rcurve.Arc.StartPoint)
+    print("    StartPoint:", rcurve.Arc.StartPoint)
     print("      EndPoint:", rcurve.Arc.EndPoint)
     print("        Center:", rcurve.Arc.Center)
     print("        Radius:", rcurve.Radius)

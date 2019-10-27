@@ -59,7 +59,7 @@ class Import3dm(Operator, ImportHelper):
 
     # List of operator properties, the attributes will be assigned
     # to the class instance from the operator settings before calling.
-    import_hidden: BoolProperty(
+    import_hidden_objects: BoolProperty(
         name="Import Hidden Geometry",
         description="Import Hidden Geometry",
         default=True,
@@ -106,7 +106,15 @@ class Import3dm(Operator, ImportHelper):
 #    )
 
     def execute(self, context):
-        return read_3dm(context, self.filepath, self.import_hidden, self.import_views, self.import_named_views, self.import_instances, self.update_materials, self.import_hidden_layers)
+        options = {
+            "filepath":self.filepath,
+            "import_views":self.import_views,
+            "import_named_views":self.import_named_views,
+            "update_materials":self.update_materials,
+            "import_hidden_objects":self.import_hidden_objects,
+            "import_hidden_layers":self.import_hidden_layers,
+        }
+        return read_3dm(context, options)
 
 # Only needed if you want to add into a dynamic menu
 def menu_func_import(self, context):
