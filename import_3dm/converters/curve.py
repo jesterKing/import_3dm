@@ -149,7 +149,7 @@ def import_polycurve(rcurve, bcurve, scale):
 
 CONVERT[r3d.PolyCurve] = import_polycurve
 
-def import_curve(og,context, n, Name, Id, layer, rhinomat, scale):
+def import_curve(og,context, n, Name, Id, layer, rhinomat, rhinocolor, scale):
 
     if type(og) in CONVERT.keys():
 
@@ -162,7 +162,7 @@ def import_curve(og,context, n, Name, Id, layer, rhinomat, scale):
 
         add_curve(context, n, Name, Id, curve_data, layer, rhinomat)
 
-def add_curve(context, name, origname, id, cdata, layer, rhinomat):
+def add_curve(context, name, origname, id, cdata, layer, rhinomat, rhinocolor):
 
     cdata.materials.append(rhinomat)
 

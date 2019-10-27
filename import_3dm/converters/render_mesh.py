@@ -24,7 +24,7 @@ import rhino3dm as r3d
 from . import utils
 
 
-def add_object(context, name, origname, id, verts, faces, layer, rhinomat):
+def add_object(context, name, origname, id, verts, faces, layer, rhinomat, rhinocolor):
     """
     Add a new object with given mesh data, link to
     collection given by layer
@@ -35,13 +35,14 @@ def add_object(context, name, origname, id, verts, faces, layer, rhinomat):
     ob = utils.get_iddata(context.blend_data.objects, id, origname, mesh)
     # Rhino data is all in world space, so add object at 0,0,0
     ob.location = (0.0, 0.0, 0.0)
+    ob.color = [x/255. for x in rhinocolor]
     try:
         layer.objects.link(ob)
     except Exception:
         pass
 
 
-def import_render_mesh(og, context, n, Name, Id, layer, rhinomat, scale):
+def import_render_mesh(og, context, n, Name, Id, layer, rhinomat, rhinocolor, scale):
     # concatenate all meshes from all (brep) faces,
     # adjust vertex indices for faces accordingly
     # first get all render meshes
@@ -70,4 +71,4 @@ def import_render_mesh(og, context, n, Name, Id, layer, rhinomat, scale):
         fidx = fidx + len(m.Vertices)
         vertices.extend([(m.Vertices[v].X * scale, m.Vertices[v].Y * scale, m.Vertices[v].Z * scale) for v in range(len(m.Vertices))])
     # done, now add object to blender
-    add_object(context, n, Name, Id, vertices, faces, layer, rhinomat)
+    add_object(context, n, Name, Id, vertices, faces, layer, rhinomat, rhinocolor)
