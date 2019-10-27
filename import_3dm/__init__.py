@@ -113,6 +113,7 @@ class Import3dm(Operator, ImportHelper):
             "update_materials":self.update_materials,
             "import_hidden_objects":self.import_hidden_objects,
             "import_hidden_layers":self.import_hidden_layers,
+            "import_instances":self.import_instances
         }
         return read_3dm(context, options)
 

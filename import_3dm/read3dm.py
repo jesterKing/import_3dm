@@ -153,6 +153,7 @@ def read_3dm(context, options):
     import_named_views = options.get("import_named_views", False)
     import_hidden_objects = options.get("import_hidden_objects", False)
     import_hidden_layers = options.get("import_hidden_layers", False)
+    import_instances = options.get("import_instances",False)
     update_materials = options.get("update_materials", False)
 
 
@@ -168,6 +169,10 @@ def read_3dm(context, options):
     # Handle layers
     converters.handle_layers(context, model, toplayer, layerids, materials, update_materials, import_hidden_layers)
 
+    #build skeletal hierarchy of instance definitions as collections (will be populated by object importer)
+    if import_instances:
+        converters.handle_instance_definitions(context, model, toplayer, "Instance Definitions",scale) 
+
     # Handle objects
     for ob in model.Objects:
         og = ob.Geometry
@@ -182,7 +187,7 @@ def read_3dm(context, options):
         else:
             n = attr.Name
 
-        if og.ObjectType==r3d.ObjectType.InstanceReference:
+        if og.ObjectType==r3d.ObjectType.InstanceReference and import_instances:
             n= model.InstanceDefinitions.FindId(og.ParentIdefId).Name
             import_option = import_instances
 
@@ -207,13 +212,18 @@ def read_3dm(context, options):
             rhinomat = materials[rhinomatname]
         layer = layerids[str(layeruuid)][1]
 
-        print(n)
+        #if object is part of an instance definition, reset the layer to be linked to
+        if import_instances:
+            for idef in model.InstanceDefinitions:
+                if idef.IsInstanceGeometryId(ob.Attritubes.Id):
+                    layer = idef.Name
+
         convert_rhino_object(ob, context, n, layer, rhinomat, scale, import_option)
   
    
     #after importing all objects, fish out instance definition objects
-    if import_instances:
-        converters.populate_instance_definitions(context, model, toplayer, "Instance Definitions")
+    #if import_instances:
+    #    converters.populate_instance_definitions(context, model, toplayer, "Instance Definitions")
         
     # finally link in the container collection (top layer) into the main
     # scene collection.

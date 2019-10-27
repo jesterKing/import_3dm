@@ -87,8 +87,6 @@ def populate_instance_definitions(context, model, toplayer, layername):
         for ob in model.Objects:
             if ob.Attributes.Id in idef.GetObjectIds():
                 children=[o for o in context.blend_data.objects if o.get('rhid', None) == str(ob.Attributes.Id)]
-                print(children)
-                #hen or egg guid'ed objects or instances!?
                 for c in children:
                     try:
                         context.blend_data.collections[idef.Name].objects.link(c)
