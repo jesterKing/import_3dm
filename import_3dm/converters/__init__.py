@@ -38,3 +38,25 @@ RHINO_TYPE_TO_IMPORT = {
     r3d.ObjectType.Mesh : import_render_mesh,
     r3d.ObjectType.Curve : import_curve
 }
+
+
+
+# TODO: Decouple object data creation from object creation
+#       and consolidate object-level conversion.
+
+def convert_object(context, ob, name, layer, rhinomat, scale):
+    """
+    Add a new object with given data, link to
+    collection given by layer
+    """
+
+    data = RHINO_TYPE_TO_IMPORT[ob.Geometry.ObjectType](context, ob, name, scale)
+    data.materials.append(rhinomat)
+
+    ob = utils.get_iddata(context.blend_data.objects, ob.Attributes.Id, ob.Attributes.Name, data)
+    # Rhino data is all in world space, so add object at 0,0,0
+    ob.location = (0.0, 0.0, 0.0)
+    try:
+        layer.objects.link(ob)
+    except Exception:
+        pass

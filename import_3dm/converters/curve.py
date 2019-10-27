@@ -96,20 +96,26 @@ def import_polycurve(rcurve, bcurve, scale):
             CONVERT[type(seg)](seg, bcurve, scale)
     '''
 
-CONVERT[r3d.Polycurve] = import_polycurve
+CONVERT[r3d.PolyCurve] = import_polycurve
 
 
-def import_curve(og,context, n, Name, Id, layer, rhinomat, scale):
+def import_curve(context, ob, name, scale):
 
-    curve_data = context.blend_data.curves.new(Name, type="CURVE")
+    og = ob.Geometry
+    oa = ob.Attributes
+
+    curve_data = context.blend_data.curves.new(n, type="CURVE")
 
     curve_data.dimensions = '3D'
     curve_data.resolution_u = 2
 
     CONVERT[type(og)](og, curve_data, scale)
 
-    add_curve(context, n, Name, Id, curve_data, layer, rhinomat)
+    return curve_data
 
+    #add_curve(context, n, Name, Id, curve_data, layer, rhinomat)
+
+'''
 def add_curve(context, name, origname, id, cdata, layer, rhinomat):
 
     cdata.materials.append(rhinomat)
@@ -122,3 +128,4 @@ def add_curve(context, name, origname, id, cdata, layer, rhinomat):
         layer.objects.link(ob)
     except Exception:
         pass
+'''
