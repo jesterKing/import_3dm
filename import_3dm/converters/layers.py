@@ -32,6 +32,15 @@ def handle_layers(context, model, toplayer, layerids, materials, update, import_
     Update materials dictionary with materials created
     for layer color.
     """
+    #setup main container to hold all layer collections
+    layer_col_id="Layers"
+    if not layer_col_id in context.blend_data.collections:
+            layer_col = context.blend_data.collections.new(name=layer_col_id)
+            try:
+                toplayer.children.link(layer_col)
+            except Exception:
+                pass
+
     # build lookup table for LayerTable index
     # from GUID, create collection for each
     # layer
@@ -64,6 +73,6 @@ def handle_layers(context, model, toplayer, layerids, materials, update, import_
         # or to the top collection if no parent layer was found
         else:
             try:
-                toplayer.children.link(layerids[str(l.Id)][1])
+                layer_col.children.link(layerids[str(l.Id)][1])
             except Exception:
                 pass
