@@ -104,7 +104,7 @@ def import_curve(context, ob, name, scale):
     og = ob.Geometry
     oa = ob.Attributes
 
-    curve_data = context.blend_data.curves.new(n, type="CURVE")
+    curve_data = context.blend_data.curves.new(name, type="CURVE")
 
     curve_data.dimensions = '3D'
     curve_data.resolution_u = 2
