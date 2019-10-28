@@ -172,25 +172,29 @@ def read_3dm(context, options):
     for ob in model.Objects:
         og = ob.Geometry
 
+        # Skip unsupported object types early
         if og.ObjectType not in converters.RHINO_TYPE_TO_IMPORT:
             continue
-            
-        convert_rhino_object = converters.RHINO_TYPE_TO_IMPORT[og.ObjectType]
+
+        #convert_rhino_object = converters.RHINO_TYPE_TO_IMPORT[og.ObjectType]
+        
+        # Check object and layer visibility
         attr = ob.Attributes
 
         if not attr.Visible and not import_hidden:
             continue
-
-        if attr.Name == "" or attr.Name is None:
-            n = str(og.ObjectType).split(".")[1]+" " + str(attr.Id)
-        else:
-            n = attr.Name
 
         rhinolayer = model.Layers.FindIndex(attr.LayerIndex)
 
         if not rhinolayer.Visible and not import_hidden_layers:
             continue
 
+        # Create object name
+        if attr.Name == "" or attr.Name is None:
+            n = str(og.ObjectType).split(".")[1]+" " + str(attr.Id)
+        else:
+            n = attr.Name
+            
         # Get render material
         mat_index = ob.Attributes.MaterialIndex
 
@@ -216,7 +220,10 @@ def read_3dm(context, options):
         # Fetch layer
         layer = layerids[str(rhinolayer.Id)][1]
 
-        convert_rhino_object(og, context, n, attr.Name, attr.Id, layer, rhinomat, view_color, scale)
+        # Convert object
+        converters.convert_object(context, ob, n, layer, rhinomat, view_color, scale)
+
+        #convert_rhino_object(og, context, n, attr.Name, attr.Id, layer, rhinomat, scale)
 
     # finally link in the container collection (top layer) into the main
     # scene collection.
