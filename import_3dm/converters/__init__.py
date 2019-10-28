@@ -67,6 +67,14 @@ def convert_object(context, ob, name, layer, rhinomat, scale):
     # Rhino data is all in world space, so add object at 0,0,0
     blender_object.location = (0.0, 0.0, 0.0)
 
+
+    # Import Rhino user strings
+    for pair in ob.Attributes.GetUserStrings():
+        blender_object[pair[0]] = pair[1]
+
+    for pair in ob.Geometry.GetUserStrings():
+        blender_object[pair[0]] = pair[1]
+
     try:
         layer.objects.link(blender_object)
     except Exception:
