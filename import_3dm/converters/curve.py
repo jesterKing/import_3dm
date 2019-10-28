@@ -156,8 +156,8 @@ def import_curve(context, ob, name, scale):
     oa = ob.Attributes
 
     curve_data = context.blend_data.curves.new(name, type="CURVE")
-    if type(og) in CONVERT.keys():
 
+    if type(og) in CONVERT.keys():
         curve_data.dimensions = '3D'
         curve_data.resolution_u = 2
 
