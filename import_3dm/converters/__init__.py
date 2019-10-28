@@ -44,7 +44,7 @@ RHINO_TYPE_TO_IMPORT = {
 # TODO: Decouple object data creation from object creation
 #       and consolidate object-level conversion.
 
-def convert_object(context, ob, name, layer, rhinomat, scale):
+def convert_object(context, ob, name, layer, rhinomat, view_color, scale):
     """
     Add a new object with given data, link to
     collection given by layer
@@ -66,6 +66,7 @@ def convert_object(context, ob, name, layer, rhinomat, scale):
 
     # Rhino data is all in world space, so add object at 0,0,0
     blender_object.location = (0.0, 0.0, 0.0)
+    blender_object.color = [x/255. for x in view_color]
 
 
     # Import Rhino user strings

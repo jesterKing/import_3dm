@@ -166,6 +166,7 @@ def read_3dm(context, options):
 
     # Handle layers
     converters.handle_layers(context, model, toplayer, layerids, materials, update_materials, import_hidden_layers)
+    materials[converters.material.DEFAULT_RHINO_MATERIAL] = None
 
     # Handle objects
     for ob in model.Objects:
@@ -179,13 +180,11 @@ def read_3dm(context, options):
         
         # Check object and layer visibility
         attr = ob.Attributes
+
         if not attr.Visible and not import_hidden:
             continue
 
-        if attr.LayerIndex != -1:
-            rhinolayer = model.Layers[attr.LayerIndex]
-        else:
-            rhinolayer = model.Layers[0]
+        rhinolayer = model.Layers.FindIndex(attr.LayerIndex)
 
         if not rhinolayer.Visible and not import_hidden_layers:
             continue
@@ -195,22 +194,34 @@ def read_3dm(context, options):
             n = str(og.ObjectType).split(".")[1]+" " + str(attr.Id)
         else:
             n = attr.Name
+            
+        # Get render material
+        mat_index = ob.Attributes.MaterialIndex
 
-        # Get object material
-        matname = None
-        if attr.MaterialIndex != -1:
-            matname = converters.material_name(model.Materials[attr.MaterialIndex])
+        if ob.Attributes.MaterialSource == r3d.ObjectMaterialSource.MaterialFromLayer:
+            mat_index = rhinolayer.RenderMaterialIndex
 
-        layeruuid = rhinolayer.Id
-        rhinomatname = rhinolayer.Name + "+" + str(layeruuid)
-        if matname:
-            rhinomat = materials[matname]
+        rhino_material = model.Materials.FindIndex(mat_index)
+
+        # Handle default material and fetch associated Blender material
+        if rhino_material.Name == "":
+            matname = converters.material.DEFAULT_RHINO_MATERIAL
         else:
-            rhinomat = materials[rhinomatname]
-        layer = layerids[str(layeruuid)][1]
+            matname = converters.material_name(rhino_material)
+
+        # Handle object view color
+        if ob.Attributes.ColorSource == r3d.ObjectColorSource.ColorFromLayer:
+            view_color = rhinolayer.Color
+        else:
+            view_color = ob.Attributes.Color
+
+        rhinomat = materials[matname]
+
+        # Fetch layer
+        layer = layerids[str(rhinolayer.Id)][1]
 
         # Convert object
-        converters.convert_object(context, ob, n, layer, rhinomat, scale)
+        converters.convert_object(context, ob, n, layer, rhinomat, view_color, scale)
 
         #convert_rhino_object(og, context, n, attr.Name, attr.Id, layer, rhinomat, scale)
 

@@ -27,6 +27,9 @@ import rhino3dm as r3d
 from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
 from . import utils
 
+### default Rhino material name
+DEFAULT_RHINO_MATERIAL = "Rhino Default Material"
+
 #### material hashing functions
 
 _black = (0, 0, 0, 255)

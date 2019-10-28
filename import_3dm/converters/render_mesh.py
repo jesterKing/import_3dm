@@ -35,6 +35,7 @@ def add_object(context, name, origname, id, verts, faces, layer, rhinomat):
     ob = utils.get_iddata(context.blend_data.objects, id, origname, mesh)
     # Rhino data is all in world space, so add object at 0,0,0
     ob.location = (0.0, 0.0, 0.0)
+    ob.color = [x/255. for x in rhinocolor]
     try:
         layer.objects.link(ob)
     except Exception:
@@ -77,6 +78,7 @@ def import_render_mesh(context, ob, name, scale):
     mesh.from_pydata(vertices, [], faces)
 
     # done, now add object to blender
+
     
     return mesh
     #add_object(context, n, Name, Id, vertices, faces, layer, rhinomat)
