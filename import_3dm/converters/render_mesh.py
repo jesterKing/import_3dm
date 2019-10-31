@@ -23,7 +23,7 @@
 import rhino3dm as r3d
 from . import utils
 
-
+'''
 def add_object(context, name, origname, id, verts, faces, layer, rhinomat):
     """
     Add a new object with given mesh data, link to
@@ -39,15 +39,14 @@ def add_object(context, name, origname, id, verts, faces, layer, rhinomat):
         layer.objects.link(ob)
     except Exception:
         pass
+'''
 
-
-def import_render_mesh(ob, context, n, layer, rhinomat, scale, option):
+def import_render_mesh(context, ob, name, scale):
     # concatenate all meshes from all (brep) faces,
     # adjust vertex indices for faces accordingly
     # first get all render meshes
-    og=ob.Geometry
-    Name=ob.Attributes.Name
-    Id=ob.Attributes.Id
+    og = ob.Geometry
+    oa = ob.Attributes
 
     if og.ObjectType == r3d.ObjectType.Extrusion:
         msh = [og.GetMesh(r3d.MeshType.Any)]
@@ -73,5 +72,11 @@ def import_render_mesh(ob, context, n, layer, rhinomat, scale, option):
 
         fidx = fidx + len(m.Vertices)
         vertices.extend([(m.Vertices[v].X * scale, m.Vertices[v].Y * scale, m.Vertices[v].Z * scale) for v in range(len(m.Vertices))])
+    
+    mesh = context.blend_data.meshes.new(name=name)
+    mesh.from_pydata(vertices, [], faces)
+
     # done, now add object to blender
-    add_object(context, n, Name, Id, vertices, faces, layer, rhinomat)
+    
+    return mesh
+    #add_object(context, n, Name, Id, vertices, faces, layer, rhinomat)

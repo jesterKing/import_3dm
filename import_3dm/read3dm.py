@@ -176,16 +176,17 @@ def read_3dm(context, options):
     # Handle objects
     for ob in model.Objects:
         og = ob.Geometry
+
+        # Skip unsupported object types early
         if og.ObjectType not in converters.RHINO_TYPE_TO_IMPORT:
             continue
-        convert_rhino_object = converters.RHINO_TYPE_TO_IMPORT[og.ObjectType]
+
+        #convert_rhino_object = converters.RHINO_TYPE_TO_IMPORT[og.ObjectType]
+        
+        # Check object and layer visibility
         attr = ob.Attributes
         if not attr.Visible and not import_hidden:
             continue
-        if attr.Name == "" or attr.Name is None:
-            n = str(og.ObjectType).split(".")[1]+" " + str(attr.Id)
-        else:
-            n = attr.Name
 
         if og.ObjectType==r3d.ObjectType.InstanceReference and import_instances:
             n= model.InstanceDefinitions.FindId(og.ParentIdefId).Name
@@ -197,9 +198,15 @@ def read_3dm(context, options):
             rhinolayer = model.Layers[0]
 
         if not rhinolayer.Visible and not import_hidden_layers:
-            #print("Skipping hidden layer again.")
             continue
 
+        # Create object name
+        if attr.Name == "" or attr.Name is None:
+            n = str(og.ObjectType).split(".")[1]+" " + str(attr.Id)
+        else:
+            n = attr.Name
+
+        # Get object material
         matname = None
         if attr.MaterialIndex != -1:
             matname = converters.material_name(model.Materials[attr.MaterialIndex])
@@ -212,19 +219,11 @@ def read_3dm(context, options):
             rhinomat = materials[rhinomatname]
         layer = layerids[str(layeruuid)][1]
 
-        #if object is part of an instance definition, reset the layer to be linked to
-        if import_instances:
-            for idef in model.InstanceDefinitions:
-                if idef.IsInstanceGeometryId(ob.Attritubes.Id):
-                    layer = idef.Name
+        # Convert object
+        converters.convert_object(context, ob, n, layer, rhinomat, scale)
 
-        convert_rhino_object(ob, context, n, layer, rhinomat, scale, import_option)
-  
-   
-    #after importing all objects, fish out instance definition objects
-    #if import_instances:
-    #    converters.populate_instance_definitions(context, model, toplayer, "Instance Definitions")
-        
+        #convert_rhino_object(og, context, n, attr.Name, attr.Id, layer, rhinomat, scale)
+
     # finally link in the container collection (top layer) into the main
     # scene collection.
     try:
