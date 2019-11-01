@@ -146,7 +146,6 @@ def read_3dm(context, options):
     
     layerids = {}
     materials = {}
-    import_option=True
 
     # Parse options
     import_views = options.get("import_views", False)
@@ -171,7 +170,7 @@ def read_3dm(context, options):
 
     #build skeletal hierarchy of instance definitions as collections (will be populated by object importer)
     if import_instances:
-        converters.handle_instance_definitions(context, model, toplayer, "Instance Definitions",scale) 
+        converters.handle_instance_definitions(context, model, toplayer, "Instance Definitions") 
 
     # Handle objects
     for ob in model.Objects:
@@ -187,10 +186,6 @@ def read_3dm(context, options):
         attr = ob.Attributes
         if not attr.Visible and not import_hidden:
             continue
-
-        if og.ObjectType==r3d.ObjectType.InstanceReference and import_instances:
-            n= model.InstanceDefinitions.FindId(og.ParentIdefId).Name
-            import_option = import_instances
 
         if attr.LayerIndex != -1:
             rhinolayer = model.Layers[attr.LayerIndex]
@@ -219,10 +214,16 @@ def read_3dm(context, options):
             rhinomat = materials[rhinomatname]
         layer = layerids[str(layeruuid)][1]
 
+        
+        if og.ObjectType==r3d.ObjectType.InstanceReference and import_instances:
+            n= model.InstanceDefinitions.FindId(og.ParentIdefId).Name
+
         # Convert object
-        converters.convert_object(context, ob, n, layer, rhinomat, scale)
+        converters.convert_object(context, ob, n, layer, rhinomat, scale, options)
 
         #convert_rhino_object(og, context, n, attr.Name, attr.Id, layer, rhinomat, scale)
+
+    converters.populate_instance_definitions(context, model, toplayer, "Instance Definitions")
 
     # finally link in the container collection (top layer) into the main
     # scene collection.

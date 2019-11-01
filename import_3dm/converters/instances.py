@@ -32,10 +32,9 @@ from . import utils
 #proper exception handling
 
     
-def handle_instance_definitions(context, model, toplayer, layername, scale):
+def handle_instance_definitions(context, model, toplayer, layername):
     """
-    import instance definitions from rhino model as collections and recreate hierarchy of instances
-    using collections and collection instances
+    import instance definitions from rhino model as empty collections
     """
   
     if not layername in context.blend_data.collections:
@@ -43,28 +42,24 @@ def handle_instance_definitions(context, model, toplayer, layername, scale):
             toplayer.children.link(instance_col)
 
     for idef in model.InstanceDefinitions:
-
-        #TODO: tag collection with idef guid
-        if not idef.Name in context.blend_data.collections:
-            idef_col = context.blend_data.collections.new(name=idef.Name)
-        else:
-            idef_col = context.blend_data.collections[idef.Name]
-            utils.tag_data(idef_col, idef.Id, idef.Name)
+        idef_col=utils.get_iddata(context.blend_data.collections,idef.Id, idef.Name, None )
 
         try:
             instance_col.children.link(idef_col)
         except Exception:
             pass
 
-def import_instance_reference(ob, context, n, layer, rhinomat, scale, option):
-    if option:
+def import_instance_reference(context, ob, name, scale, options):
+    #TODO:  insert reduced mesh proxy and hide actual instance in viewport for better performance on large files
+    import_instances = options.get("import_instances",False)
+    if import_instances:
         #add an empty and set it up as a collection instance pointing to the collection given in "n"
         iref = bpy.data.objects.new('empty', None)
         iref.empty_display_size=1
         iref.empty_display_type='PLAIN_AXES'
         iref.instance_type='COLLECTION'
-        iref.name=n
-        iref.instance_collection = context.blend_data.collections[n]
+        iref.name=name+"_Instance"
+        iref.instance_collection = utils.get_iddata(context.blend_data.collections,ob.Geometry.ParentIdefId,"",None)
         xform=list(ob.Geometry.Xform.ToFloatArray(1))
         xform=[xform[0:4],xform[4:8], xform[8:12], xform[12:16]]
         xform[0][3]*=scale 
@@ -73,11 +68,7 @@ def import_instance_reference(ob, context, n, layer, rhinomat, scale, option):
         iref.matrix_world = Matrix(xform)
         utils.tag_data(iref, ob.Attributes.Id, ob.Attributes.Name)
                             
-        #try to link iref into parent layer
-        try:
-            layer.objects.link(iref)
-        except Exception:
-            pass
+        return iref
 
 def populate_instance_definitions(context, model, toplayer, layername):
     #for every instance definition fish out the instance definition objects and link them to their parent collection
