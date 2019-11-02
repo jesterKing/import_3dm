@@ -47,29 +47,28 @@ RHINO_TYPE_TO_IMPORT = {
 # TODO: Decouple object data creation from object creation
 #       and consolidate object-level conversion.
 
-def convert_object(context, ob, name, layer, rhinomat, scale, options):
+def convert_object(context, ob, name, layer, rhinomat, view_color, scale, options):
     """
     Add a new object with given data, link to
     collection given by layer
     """
 
     data = None
+    blender_object = None
 
     if ob.Geometry.ObjectType in RHINO_TYPE_TO_IMPORT:
         data = RHINO_TYPE_TO_IMPORT[ob.Geometry.ObjectType](context, ob, name, scale, options)
 
-    if ob.Geometry.ObjectType == r3d.ObjectType.InstanceReference:
-        blender_object=data
+    if data:
+        if ob.Geometry.ObjectType == r3d.ObjectType.InstanceReference:
+            blender_object=data
+        else:
+            data.materials.append(rhinomat)
+            blender_object = utils.get_iddata(context.blend_data.objects, ob.Attributes.Id, ob.Attributes.Name, data)
+            blender_object.color = [x/255. for x in view_color]
 
-    else:
-        data.materials.append(rhinomat)
-
-        blender_object = utils.get_iddata(context.blend_data.objects, ob.Attributes.Id, ob.Attributes.Name, data)
-    
-        # Rhino data is all in world space, so add object at 0,0,0
-        blender_object.location = (0.0, 0.0, 0.0)
-
-    try:
-        layer.objects.link(blender_object)
-    except Exception:
-        pass
+    if blender_object:
+        try:
+            layer.objects.link(blender_object)
+        except Exception:
+            pass
