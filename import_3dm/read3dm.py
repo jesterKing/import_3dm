@@ -154,6 +154,7 @@ def read_3dm(context, options):
     import_hidden_layers = options.get("import_hidden_layers", False)
     import_groups = options.get("import_groups", False)
     import_nested_groups = options.get("import_nested_groups", False)
+    import_instances = options.get("import_instances",False)
     update_materials = options.get("update_materials", False)
 
 
@@ -168,6 +169,10 @@ def read_3dm(context, options):
 
     # Handle layers
     converters.handle_layers(context, model, toplayer, layerids, materials, update_materials, import_hidden_layers)
+
+    #build skeletal hierarchy of instance definitions as collections (will be populated by object importer)
+    if import_instances:
+        converters.handle_instance_definitions(context, model, toplayer, "Instance Definitions") 
 
     # Handle objects
     for ob in model.Objects:
@@ -211,8 +216,12 @@ def read_3dm(context, options):
             rhinomat = materials[rhinomatname]
         layer = layerids[str(layeruuid)][1]
 
+        
+        if og.ObjectType==r3d.ObjectType.InstanceReference and import_instances:
+            n= model.InstanceDefinitions.FindId(og.ParentIdefId).Name
+
         # Convert object
-        converters.convert_object(context, ob, n, layer, rhinomat, scale)
+        converters.convert_object(context, ob, n, layer, rhinomat, scale, options)
 
         #convert_rhino_object(og, context, n, attr.Name, attr.Id, layer, rhinomat, scale)
 
@@ -226,6 +235,9 @@ def read_3dm(context, options):
 
         if import_groups:
             converters.handle_groups(context,attr,toplayer,last_obj[0],import_nested_groups)
+
+    if import_instances:
+        converters.populate_instance_definitions(context, model, toplayer, "Instance Definitions")
 
     # finally link in the container collection (top layer) into the main
     # scene collection.
