@@ -41,7 +41,7 @@ def add_object(context, name, origname, id, verts, faces, layer, rhinomat):
         pass
 '''
 
-def import_render_mesh(context, ob, name, scale):
+def import_render_mesh(context, ob, name, scale, options):
     # concatenate all meshes from all (brep) faces,
     # adjust vertex indices for faces accordingly
     # first get all render meshes

@@ -95,6 +95,11 @@ class Import3dm(Operator, ImportHelper):
         default=False,
     )
 
+    import_instances: BoolProperty(
+        name="Import Blocks (Experimental).",
+        description="Import blocks as collection instances.",
+        default=False,
+    )
 
     update_materials: BoolProperty(
         name="Update Materials.",
@@ -122,8 +127,10 @@ class Import3dm(Operator, ImportHelper):
             "import_hidden_layers":self.import_hidden_layers,
             "import_groups":self.import_groups,
             "import_nested_groups":self.import_nested_groups,
+            "import_instances":self.import_instances,
         }
         return read_3dm(context, options)
+
 
 # Only needed if you want to add into a dynamic menu
 def menu_func_import(self, context):
