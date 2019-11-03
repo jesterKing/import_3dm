@@ -219,7 +219,7 @@ def read_3dm(context, options):
         if ob.Attributes.ColorSource == r3d.ObjectColorSource.ColorFromLayer:
             view_color = rhinolayer.Color
         else:
-            view_color = ob.Attributes.Color
+            view_color = ob.Attributes.ObjectColor
 
         rhinomat = materials[matname]
 
@@ -235,16 +235,8 @@ def read_3dm(context, options):
 
         #convert_rhino_object(og, context, n, attr.Name, attr.Id, layer, rhinomat, scale)
 
-
-        #last_obj=context.active_object #doesnt work for whatever reason (not linked to scene yet??)
-        #fetch last created oject by its r3d guid
-        try:
-            last_obj=[obj for obj in context.blend_data.objects if obj.get('rhid', None) == str(attr.Id)]
-        except Exception:
-            return
-
         if import_groups:
-            converters.handle_groups(context,attr,toplayer,last_obj[0],import_nested_groups)
+            converters.handle_groups(context,attr,toplayer,import_nested_groups)
 
     if import_instances:
         converters.populate_instance_definitions(context, model, toplayer, "Instance Definitions")

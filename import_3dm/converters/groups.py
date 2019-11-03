@@ -21,12 +21,10 @@
 # SOFTWARE.
 from . import utils
 
-def handle_groups(context,attr,toplayer, last_obj, import_nested_groups):
-
-    #if selected, check if object is group member
+def handle_groups(context,attr,toplayer, import_nested_groups):
+    #check if object is member of one or more groups
     if attr.GroupCount>0:
         group_list = attr.GetGroupList()
-        print(group_list)
         group_prefix = "Group_"
         group_col_id = "Groups"
 
@@ -65,16 +63,22 @@ def handle_groups(context,attr,toplayer, last_obj, import_nested_groups):
             if not child_id in pcol.children:
                 pcol.children.link(ccol)
 
+            #get the last create blender object by its id
+            last_obj=None
+            for o in context.blend_data.objects:
+                if o.get('rhid', None) == str(attr.Id):
+                    last_obj=o
 
-            #if were in the lowest group of the hierarchy and nesting is enabled, link the object to the collection
-            if index==0 and import_nested_groups:
-                try:
-                    ccol.objects.link(last_obj)
-                except Exception:
-                    pass
-            #if nested import is disabled, link to every collection it belongs to
-            elif not import_nested_groups:
-                try:
-                    ccol.objects.link(last_obj)
-                except Exception:
-                    pass
+            if last_obj:
+                #if were in the lowest group of the hierarchy and nesting is enabled, link the object to the collection
+                if index==0 and import_nested_groups:
+                    try:
+                        ccol.objects.link(last_obj)
+                    except Exception:
+                        pass
+                #if nested import is disabled, link to every collection it belongs to
+                elif not import_nested_groups:
+                    try:
+                        ccol.objects.link(last_obj)
+                    except Exception:
+                        pass

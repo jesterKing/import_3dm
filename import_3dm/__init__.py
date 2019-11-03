@@ -86,7 +86,7 @@ class Import3dm(Operator, ImportHelper):
     import_groups: BoolProperty(
         name="Import Groups.",
         description="Import groups as collections.",
-        default=True,
+        default=False,
     )
 
     import_nested_groups: BoolProperty(
