@@ -71,18 +71,17 @@ def import_instance_reference(context, ob, name, scale, options):
         return iref
 
 def populate_instance_definitions(context, model, toplayer, layername):
-    #for every instance definition fish out the instance definition objects and link them to their parent collection
-    #this has to be done AFTER all
+    #for every instance definition fish out the instance definition objects and link them to their parent 
     for idef in model.InstanceDefinitions:
-        #TODO: change this method! in a very large file this would loop through all objects for every single instance definition, possibly taking forever
-        for ob in model.Objects:
-            if ob.Attributes.Id in idef.GetObjectIds():
-                children=[o for o in context.blend_data.objects if o.get('rhid', None) == str(ob.Attributes.Id)]
-                for c in children:
-                    try:
-                        context.blend_data.collections[idef.Name].objects.link(c)
-                    except Exception:
-                        pass
+        parent=utils.get_iddata(context.blend_data.collections, idef.Id, idef.Name, None)
+        objectids=idef.GetObjectIds()
+
+        for ob in context.blend_data.objects:
+            if ob.get('rhid',None) in objectids:
+                try:
+                    parent.objects.link(ob)
+                except Exception:
+                    pass
 
 
 
