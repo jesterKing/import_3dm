@@ -77,11 +77,12 @@ def populate_instance_definitions(context, model, toplayer, layername):
         objectids=idef.GetObjectIds()
 
         for ob in context.blend_data.objects:
-            if ob.get('rhid',None) in objectids:
-                try:
-                    parent.objects.link(ob)
-                except Exception:
-                    pass
+            for uuid in objectids:
+                if ob.get('rhid',None) == str(uuid):
+                    try:
+                        parent.objects.link(ob)
+                    except Exception:
+                        pass
 
 
 
