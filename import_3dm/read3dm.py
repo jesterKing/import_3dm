@@ -219,7 +219,7 @@ def read_3dm(context, options):
         if ob.Attributes.ColorSource == r3d.ObjectColorSource.ColorFromLayer:
             view_color = rhinolayer.Color
         else:
-            view_color = ob.Attributes.Color
+            view_color = ob.Attributes.ObjectColor
 
         rhinomat = materials[matname]
 
