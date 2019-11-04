@@ -123,7 +123,7 @@ class Import3dm(Operator, ImportHelper):
 
     def draw(self, context):
         layout = self.layout
-        layout.label(text="Import .3dm v0.6")
+        layout.label(text="Import .3dm v{}.{}.{}".format(bl_info["version"][0], bl_info["version"][1], bl_info["version"][2]))
 
         box = layout.box()       
         box.label(text="Visibility")
