@@ -60,62 +60,52 @@ class Import3dm(Operator, ImportHelper):
     # List of operator properties, the attributes will be assigned
     # to the class instance from the operator settings before calling.
     import_hidden_objects: BoolProperty(
-        name="Import Hidden Geometry.",
+        name="Hidden Geometry",
         description="Import hidden geometry.",
         default=True,
     )
 
     import_hidden_layers: BoolProperty(
-        name="Import Hidden Layers.",
+        name="Hidden Layers",
         description="Import hidden layers.",
         default=True,
     )
 
     import_views: BoolProperty(
-        name="Import Standard Views.",
+        name="Standard",
         description="Import standard views (Top, Front, Right, Perspective) as cameras.",
         default=False,
     )
 
     import_named_views: BoolProperty(
-        name="Import Named Views.",
+        name="Named",
         description="Import named views as cameras.",
         default=True,
     )
 
     import_groups: BoolProperty(
-        name="Import Groups.",
+        name="Groups",
         description="Import groups as collections.",
         default=False,
     )
 
     import_nested_groups: BoolProperty(
-        name="Handle Nested Groups.",
+        name="Nested Groups",
         description="Recreate nested group hierarchy as collections.",
         default=False,
     )
 
     import_instances: BoolProperty(
-        name="Import Blocks (Experimental).",
+        name="Blocks (Experimental)",
         description="Import blocks as collection instances.",
         default=False,
     )
 
     update_materials: BoolProperty(
-        name="Update Materials.",
+        name="Update Materials",
         description="Update existing materials. When unchecked create new materials if existing ones are found.",
         default=True,
     )
-
-#    type: EnumProperty(
-#        name="Example Enum",
-#        description="Choose between two items",
-#        items=(
-#            ('OPT_A', "First Option", "Description one"),
-#            ('OPT_B', "Second Option", "Description two"),
-#        ),
-#        default='OPT_A',
-#    )
 
     def execute(self, context):
         options = {
@@ -131,6 +121,31 @@ class Import3dm(Operator, ImportHelper):
         }
         return read_3dm(context, options)
 
+    def draw(self, context):
+        layout = self.layout
+        layout.label(text="Import .3dm v{}.{}.{}".format(bl_info["version"][0], bl_info["version"][1], bl_info["version"][2]))
+
+        box = layout.box()       
+        box.label(text="Visibility")
+        box.prop(self, "import_hidden_objects")
+        box.prop(self, "import_hidden_layers")
+
+        box = layout.box()       
+        box.label(text="Views")
+        row = box.row()
+        row.prop(self, "import_views")
+        row.prop(self, "import_named_views")
+
+        box = layout.box()       
+        box.label(text="Groups / Blocks")
+        row = box.row()
+        row.prop(self, "import_groups")
+        row.prop(self, "import_nested_groups")
+        box.prop(self, "import_instances")
+
+        box = layout.box()       
+        box.label(text="Materials")
+        box.prop(self, "update_materials")
 
 # Only needed if you want to add into a dynamic menu
 def menu_func_import(self, context):
