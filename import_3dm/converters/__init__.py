@@ -63,7 +63,7 @@ def convert_object(context, ob, name, layer, rhinomat, view_color, scale, option
         data.materials.append(rhinomat)
         blender_object = utils.get_iddata(context.blend_data.objects, ob.Attributes.Id, ob.Attributes.Name, data)
     else:
-        blender_object = context.blend_data.objects.new(ob.Attributes.Name+"_Instance", None)
+        blender_object = context.blend_data.objects.new(name+"_Instance", None)
         utils.tag_data(blender_object, ob.Attributes.Id, ob.Attributes.Name)        
 
     blender_object.color = [x/255. for x in view_color]
