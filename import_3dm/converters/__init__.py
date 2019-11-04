@@ -28,7 +28,7 @@ from .render_mesh import import_render_mesh
 from .curve import import_curve
 from .views import handle_views
 from .groups import handle_groups
-from .instances import *
+from .instances import import_instance_reference, handle_instance_definitions, populate_instance_definitions
 
 '''
 Dictionary mapping between the Rhino file types and importer functions
@@ -39,7 +39,7 @@ RHINO_TYPE_TO_IMPORT = {
     r3d.ObjectType.Extrusion : import_render_mesh,
     r3d.ObjectType.Mesh : import_render_mesh,
     r3d.ObjectType.Curve : import_curve,
-    r3d.ObjectType.InstanceReference : import_instance_reference
+    #r3d.ObjectType.InstanceReference : import_instance_reference
 }
 
 
@@ -60,22 +60,25 @@ def convert_object(context, ob, name, layer, rhinomat, view_color, scale, option
         data = RHINO_TYPE_TO_IMPORT[ob.Geometry.ObjectType](context, ob, name, scale, options)
 
     if data:
-        if ob.Geometry.ObjectType == r3d.ObjectType.InstanceReference:
-            blender_object=data
-        else:
-            data.materials.append(rhinomat)
-            blender_object = utils.get_iddata(context.blend_data.objects, ob.Attributes.Id, ob.Attributes.Name, data)
-            blender_object.color = [x/255. for x in view_color]
+        data.materials.append(rhinomat)
+        blender_object = utils.get_iddata(context.blend_data.objects, ob.Attributes.Id, ob.Attributes.Name, data)
+    else:
+        blender_object = context.blend_data.objects.new(ob.Attributes.Name+"_Instance", None)
+        utils.tag_data(blender_object, ob.Attributes.Id, ob.Attributes.Name)        
 
-        # Import Rhino user strings
-        for pair in ob.Attributes.GetUserStrings():
-            blender_object[pair[0]] = pair[1]
+    blender_object.color = [x/255. for x in view_color]
 
-        for pair in ob.Geometry.GetUserStrings():
-            blender_object[pair[0]] = pair[1]
+    if ob.Geometry.ObjectType == r3d.ObjectType.InstanceReference and options.get("import_instances",False):
+        import_instance_reference(context, ob, blender_object, name, scale, options)
 
-    if blender_object:
-        try:
-            layer.objects.link(blender_object)
-        except Exception:
-            pass
+    # Import Rhino user strings
+    for pair in ob.Attributes.GetUserStrings():
+        blender_object[pair[0]] = pair[1]
+
+    for pair in ob.Geometry.GetUserStrings():
+        blender_object[pair[0]] = pair[1]
+
+    try:
+        layer.objects.link(blender_object)
+    except Exception:
+        pass

@@ -180,7 +180,8 @@ def read_3dm(context, options):
         og = ob.Geometry
 
         # Skip unsupported object types early
-        if og.ObjectType not in converters.RHINO_TYPE_TO_IMPORT:
+        if og.ObjectType not in converters.RHINO_TYPE_TO_IMPORT and og.ObjectType != r3d.ObjectType.InstanceReference:
+            print("Unsupported object type... ")
             continue
 
         #convert_rhino_object = converters.RHINO_TYPE_TO_IMPORT[og.ObjectType]
@@ -228,7 +229,7 @@ def read_3dm(context, options):
 
         
         if og.ObjectType==r3d.ObjectType.InstanceReference and import_instances:
-            n= model.InstanceDefinitions.FindId(og.ParentIdefId).Name
+            n = model.InstanceDefinitions.FindId(og.ParentIdefId).Name
 
         # Convert object
         converters.convert_object(context, ob, n, layer, rhinomat, view_color, scale, options)
