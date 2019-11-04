@@ -38,7 +38,7 @@ def modules_path():
         )
     )
     if not os.path.exists(modulespath):
-        os.makedirs(modulespath) 
+        os.makedirs(modulespath)
 
     # set user modules path at beginning of paths for earlier hit
     if sys.path[1] != modulespath:
@@ -50,7 +50,7 @@ modules_path()
 
 def install_dependencies():
     modulespath = modules_path()
-    
+
     try:
         from subprocess import run as sprun
         try:
@@ -96,7 +96,7 @@ def install_dependencies():
                 pip3
                 )
             )
-            
+
         # call pip in a subprocess so we don't have to mess
         # with internals. Also, this ensures the Python used to
         # install pip is going to be used
@@ -106,7 +106,7 @@ def install_dependencies():
             raise Exception("Failed to install rhino3dm. See console for manual install instruction.")
     except:
         raise Exception("Failed to install dependencies. Please make sure you have pip installed.")
-    
+
 
 # TODO: add update mechanism
 try:
@@ -142,8 +142,8 @@ def read_3dm(context, options):
         toplayer = context.blend_data.collections.new(name=top_collection_name)
 
     # Get proper scale for conversion
-    scale = r3d.UnitSystem.UnitScale(model.Settings.ModelUnitSystem, r3d.UnitSystem.Meters) / context.scene.unit_settings.scale_length    
-    
+    scale = r3d.UnitSystem.UnitScale(model.Settings.ModelUnitSystem, r3d.UnitSystem.Meters) / context.scene.unit_settings.scale_length
+
     layerids = {}
     materials = {}
 
@@ -152,6 +152,9 @@ def read_3dm(context, options):
     import_named_views = options.get("import_named_views", False)
     import_hidden_objects = options.get("import_hidden_objects", False)
     import_hidden_layers = options.get("import_hidden_layers", False)
+    import_groups = options.get("import_groups", False)
+    import_nested_groups = options.get("import_nested_groups", False)
+    import_instances = options.get("import_instances",False)
     update_materials = options.get("update_materials", False)
 
 
@@ -168,6 +171,10 @@ def read_3dm(context, options):
     converters.handle_layers(context, model, toplayer, layerids, materials, update_materials, import_hidden_layers)
     materials[converters.material.DEFAULT_RHINO_MATERIAL] = None
 
+    #build skeletal hierarchy of instance definitions as collections (will be populated by object importer)
+    if import_instances:
+        converters.handle_instance_definitions(context, model, toplayer, "Instance Definitions") 
+
     # Handle objects
     for ob in model.Objects:
         og = ob.Geometry
@@ -180,8 +187,7 @@ def read_3dm(context, options):
         
         # Check object and layer visibility
         attr = ob.Attributes
-
-        if not attr.Visible and not import_hidden:
+        if not attr.Visible and not import_hidden_objects:
             continue
 
         rhinolayer = model.Layers.FindIndex(attr.LayerIndex)
@@ -213,17 +219,27 @@ def read_3dm(context, options):
         if ob.Attributes.ColorSource == r3d.ObjectColorSource.ColorFromLayer:
             view_color = rhinolayer.Color
         else:
-            view_color = ob.Attributes.Color
+            view_color = ob.Attributes.ObjectColor
 
         rhinomat = materials[matname]
 
         # Fetch layer
         layer = layerids[str(rhinolayer.Id)][1]
 
+        
+        if og.ObjectType==r3d.ObjectType.InstanceReference and import_instances:
+            n= model.InstanceDefinitions.FindId(og.ParentIdefId).Name
+
         # Convert object
-        converters.convert_object(context, ob, n, layer, rhinomat, view_color, scale)
+        converters.convert_object(context, ob, n, layer, rhinomat, view_color, scale, options)
 
         #convert_rhino_object(og, context, n, attr.Name, attr.Id, layer, rhinomat, scale)
+
+        if import_groups:
+            converters.handle_groups(context,attr,toplayer,import_nested_groups)
+
+    if import_instances:
+        converters.populate_instance_definitions(context, model, toplayer, "Instance Definitions")
 
     # finally link in the container collection (top layer) into the main
     # scene collection.

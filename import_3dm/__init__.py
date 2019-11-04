@@ -60,35 +60,52 @@ class Import3dm(Operator, ImportHelper):
     # List of operator properties, the attributes will be assigned
     # to the class instance from the operator settings before calling.
     import_hidden_objects: BoolProperty(
-        name="Import Hidden Geometry",
-        description="Import Hidden Geometry",
+        name="Import Hidden Geometry.",
+        description="Import hidden geometry.",
         default=True,
     )
 
     import_hidden_layers: BoolProperty(
-        name="Import Hidden Layers",
-        description="Import Hidden Layers",
+        name="Import Hidden Layers.",
+        description="Import hidden layers.",
         default=True,
-    )    
+    )
 
     import_views: BoolProperty(
-        name="Import standard views.",
+        name="Import Standard Views.",
         description="Import standard views (Top, Front, Right, Perspective) as cameras.",
         default=False,
     )
 
     import_named_views: BoolProperty(
-        name="Import named views.",
+        name="Import Named Views.",
         description="Import named views as cameras.",
         default=True,
     )
 
+    import_groups: BoolProperty(
+        name="Import Groups.",
+        description="Import groups as collections.",
+        default=False,
+    )
+
+    import_nested_groups: BoolProperty(
+        name="Handle Nested Groups.",
+        description="Recreate nested group hierarchy as collections.",
+        default=False,
+    )
+
+    import_instances: BoolProperty(
+        name="Import Blocks (Experimental).",
+        description="Import blocks as collection instances.",
+        default=False,
+    )
 
     update_materials: BoolProperty(
-        name="Update materials.",
-        description="Update existing materials. Otherwise, create new materials if existing ones are found.",
+        name="Update Materials.",
+        description="Update existing materials. When unchecked create new materials if existing ones are found.",
         default=True,
-    )          
+    )
 
 #    type: EnumProperty(
 #        name="Example Enum",
@@ -108,8 +125,12 @@ class Import3dm(Operator, ImportHelper):
             "update_materials":self.update_materials,
             "import_hidden_objects":self.import_hidden_objects,
             "import_hidden_layers":self.import_hidden_layers,
+            "import_groups":self.import_groups,
+            "import_nested_groups":self.import_nested_groups,
+            "import_instances":self.import_instances,
         }
         return read_3dm(context, options)
+
 
 # Only needed if you want to add into a dynamic menu
 def menu_func_import(self, context):

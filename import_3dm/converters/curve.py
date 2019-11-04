@@ -149,9 +149,7 @@ def import_polycurve(rcurve, bcurve, scale):
 
 CONVERT[r3d.PolyCurve] = import_polycurve
 
-
-def import_curve(context, ob, name, scale):
-
+def import_curve(context, ob, name, scale, options):
     og = ob.Geometry
     oa = ob.Attributes
 
@@ -164,20 +162,3 @@ def import_curve(context, ob, name, scale):
         CONVERT[type(og)](og, curve_data, scale)
 
     return curve_data
-
-    #add_curve(context, n, Name, Id, curve_data, layer, rhinomat)
-
-'''
-def add_curve(context, name, origname, id, cdata, layer, rhinomat):
-
-    cdata.materials.append(rhinomat)
-
-    ob = utils.get_iddata(context.blend_data.objects, id, origname, cdata)
-
-    # Rhino data is all in world space, so add object at 0,0,0
-    ob.location = (0.0, 0.0, 0.0)
-    try:
-        layer.objects.link(ob)
-    except Exception:
-        pass
-'''

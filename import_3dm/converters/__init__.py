@@ -27,6 +27,8 @@ from .layers import handle_layers
 from .render_mesh import import_render_mesh
 from .curve import import_curve
 from .views import handle_views
+from .groups import handle_groups
+from .instances import *
 
 '''
 Dictionary mapping between the Rhino file types and importer functions
@@ -36,7 +38,8 @@ RHINO_TYPE_TO_IMPORT = {
     r3d.ObjectType.Brep : import_render_mesh,
     r3d.ObjectType.Extrusion : import_render_mesh,
     r3d.ObjectType.Mesh : import_render_mesh,
-    r3d.ObjectType.Curve : import_curve
+    r3d.ObjectType.Curve : import_curve,
+    r3d.ObjectType.InstanceReference : import_instance_reference
 }
 
 
@@ -44,39 +47,35 @@ RHINO_TYPE_TO_IMPORT = {
 # TODO: Decouple object data creation from object creation
 #       and consolidate object-level conversion.
 
-def convert_object(context, ob, name, layer, rhinomat, view_color, scale):
+def convert_object(context, ob, name, layer, rhinomat, view_color, scale, options):
     """
     Add a new object with given data, link to
     collection given by layer
     """
 
     data = None
+    blender_object = None
 
     if ob.Geometry.ObjectType in RHINO_TYPE_TO_IMPORT:
-        data = RHINO_TYPE_TO_IMPORT[ob.Geometry.ObjectType](context, ob, name, scale)
+        data = RHINO_TYPE_TO_IMPORT[ob.Geometry.ObjectType](context, ob, name, scale, options)
 
     if data:
-        data.materials.append(rhinomat)
+        if ob.Geometry.ObjectType == r3d.ObjectType.InstanceReference:
+            blender_object=data
+        else:
+            data.materials.append(rhinomat)
+            blender_object = utils.get_iddata(context.blend_data.objects, ob.Attributes.Id, ob.Attributes.Name, data)
+            blender_object.color = [x/255. for x in view_color]
 
-    blender_object = utils.get_iddata(context.blend_data.objects, ob.Attributes.Id, ob.Attributes.Name, data)
+        # Import Rhino user strings
+        for pair in ob.Attributes.GetUserStrings():
+            blender_object[pair[0]] = pair[1]
 
-    if ob.Geometry.ObjectType == r3d.ObjectType.InstanceReference:
-        # Handle instance
-        pass
+        for pair in ob.Geometry.GetUserStrings():
+            blender_object[pair[0]] = pair[1]
 
-    # Rhino data is all in world space, so add object at 0,0,0
-    blender_object.location = (0.0, 0.0, 0.0)
-    blender_object.color = [x/255. for x in view_color]
-
-
-    # Import Rhino user strings
-    for pair in ob.Attributes.GetUserStrings():
-        blender_object[pair[0]] = pair[1]
-
-    for pair in ob.Geometry.GetUserStrings():
-        blender_object[pair[0]] = pair[1]
-
-    try:
-        layer.objects.link(blender_object)
-    except Exception:
-        pass
+    if blender_object:
+        try:
+            layer.objects.link(blender_object)
+        except Exception:
+            pass
