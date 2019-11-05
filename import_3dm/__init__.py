@@ -23,7 +23,7 @@
 
 bl_info = {
     "name": "Import Rhinoceros 3D",
-    "author": "Nathan 'jesterKing' Letwory, Joel Putnam, Tom Svilans",
+    "author": "Nathan 'jesterKing' Letwory, Joel Putnam, Tom Svilans, Lukas Fertig",
     "version": (0, 0, 5),
     "blender": (2, 80, 0),
     "location": "File > Import > Rhinoceros 3D (.3dm)",
