@@ -58,6 +58,8 @@ def import_render_mesh(context, ob, name, scale, options):
     fidx = 0
     faces = []
     vertices = []
+    coords = []
+
     # now add all faces and vertices to the main lists
     for m in msh:
         if not m:
@@ -73,9 +75,25 @@ def import_render_mesh(context, ob, name, scale, options):
 
         fidx = fidx + len(m.Vertices)
         vertices.extend([(m.Vertices[v].X * scale, m.Vertices[v].Y * scale, m.Vertices[v].Z * scale) for v in range(len(m.Vertices))])
-    
+        coords.extend([(m.TextureCoordinates[v].X, m.TextureCoordinates[v].Y) for v in range(len(m.TextureCoordinates))])
+   
     mesh = context.blend_data.meshes.new(name=name)
     mesh.from_pydata(vertices, [], faces)
+
+
+    if(mesh.polygons and coords):
+        # todo: 
+        # * check for multiple mappings and handle them
+        # * exclude unmapped objects 
+        mesh.uv_layers.new()
+
+        uvl = mesh.uv_layers.active.data[:]
+        for l in mesh.loops:
+            uvl[l.index].uv = coords[l.vertex_index]
+        
+        mesh.validate()
+        mesh.update()
+
 
     # done, now add object to blender
 
