@@ -80,19 +80,29 @@ def import_render_mesh(context, ob, name, scale, options):
     mesh = context.blend_data.meshes.new(name=name)
     mesh.from_pydata(vertices, [], faces)
 
-
-    if(mesh.polygons and coords):
+    
+    if mesh.loops and len(coords) == len(vertices):
         # todo: 
         # * check for multiple mappings and handle them
-        # * exclude unmapped objects 
-        mesh.uv_layers.new()
+        # * get mapping name (missing from rhino3dm)
+        # * rhino assigns a default mapping to unmapped objects, so if nothing is specified, this will be imported
 
-        uvl = mesh.uv_layers.active.data[:]
-        for l in mesh.loops:
-            uvl[l.index].uv = coords[l.vertex_index]
+        #create a new uv_layer and copy texcoords from input mesh
+        mesh.uv_layers.new(name="RhinoUVMap") 
+
+        if sum(len(x) for x in faces) == len(mesh.uv_layers["RhinoUVMap"].data):
+            uvl = mesh.uv_layers["RhinoUVMap"].data[:]
+
+            for l in mesh.loops:
+                uvl[l.index].uv = coords[l.vertex_index]
+
+            mesh.validate()
+            mesh.update()
         
-        mesh.validate()
-        mesh.update()
+        else:
+            #in case there was a data mismatch, cleanup the created layer
+            mesh.uv_layers.remove(mesh.uv_layers["RhinoUVMap"])
+
 
 
     # done, now add object to blender
