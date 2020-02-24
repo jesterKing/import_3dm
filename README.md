@@ -36,5 +36,8 @@ Preparation steps MacOS
       * `./bin/python3.7m ./lib/python3.7/ensurepip`
     * check `pip3.7` (and `pip3`) are installed in the expected location
       * `ls ./bin`
-      * ensure listing gives `pip3`
+      * ensure listing gives `pip3.7`
+    * Install (or upgrade) `rhino3dm.py`
+      * `./bin/pip3.7 install --upgrade --target ~/Library/Application\ Support/Blender/2.82/scripts/addons/modules rhino3dm`
     * you should now be ready to install the `import_3dm` add-on as per instructions in the `Installation` section.
+
