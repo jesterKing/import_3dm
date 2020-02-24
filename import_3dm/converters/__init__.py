@@ -22,7 +22,8 @@
 
 import rhino3dm as r3d
 
-from .material import handle_materials, material_name
+
+from .material import handle_materials, material_name, DEFAULT_RHINO_MATERIAL
 from .layers import handle_layers
 from .render_mesh import import_render_mesh
 from .curve import import_curve
