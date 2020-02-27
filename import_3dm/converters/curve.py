@@ -65,7 +65,7 @@ def import_polyline(rcurve, bcurve, scale):
 
     return polyline
 
-CONVERT[r3d.Polylinecurve] = import_polyline
+CONVERT[r3d.PolylineCurve] = import_polyline
 
 def import_nurbs_curve(rcurve, bcurve, scale):
 

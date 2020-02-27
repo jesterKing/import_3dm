@@ -169,7 +169,7 @@ def read_3dm(context, options):
 
     # Handle layers
     converters.handle_layers(context, model, toplayer, layerids, materials, update_materials, import_hidden_layers)
-    materials[converters.material.DEFAULT_RHINO_MATERIAL] = None
+    materials[converters.DEFAULT_RHINO_MATERIAL] = None
 
     #build skeletal hierarchy of instance definitions as collections (will be populated by object importer)
     if import_instances:
@@ -181,7 +181,7 @@ def read_3dm(context, options):
 
         # Skip unsupported object types early
         if og.ObjectType not in converters.RHINO_TYPE_TO_IMPORT and og.ObjectType != r3d.ObjectType.InstanceReference:
-            print("Unsupported object type... ")
+            print("Unsupported object type: {}".format(og.ObjectType))
             continue
 
         #convert_rhino_object = converters.RHINO_TYPE_TO_IMPORT[og.ObjectType]
