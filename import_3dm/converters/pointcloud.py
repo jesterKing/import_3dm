@@ -29,10 +29,12 @@ def import_pointcloud(context, ob, name, scale, options):
     og = ob.Geometry
     oa = ob.Attributes
 
-    vertices = []
-
     # add points as mesh vertices
-    vertices.extend([(og[v].X * scale, og[v].Y * scale, og[v].Z * scale) for v in range(og.Count)])
+
+    # The following line crashes. Seems rhino3dm does not like iterating over pointclouds.
+    #vertices = [(p.X * scale, p.Y * scale, p.Z * scale) for p in og] 
+
+    vertices = [(og[v].X * scale, og[v].Y * scale, og[v].Z * scale) for v in range(og.Count)]
     
     pointcloud = context.blend_data.meshes.new(name=name)
     pointcloud.from_pydata(vertices, [], [])
