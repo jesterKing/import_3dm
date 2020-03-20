@@ -20,109 +20,25 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import os.path
 import bpy
-import sys
 import os
-import site
 
-def modules_path():
-    # set up addons/modules under the user
-    # script path. Here we'll install the
-    # dependencies
-    modulespath = os.path.normpath(
-        os.path.join(
-            bpy.utils.script_path_user(),
-            "addons",
-            "modules"
-        )
-    )
-    if not os.path.exists(modulespath):
-        os.makedirs(modulespath)
+'''
+Import rhino3dm and attempt install if not found
+'''
 
-    # set user modules path at beginning of paths for earlier hit
-    if sys.path[1] != modulespath:
-        sys.path.insert(1, modulespath)
-
-    return modulespath
-
-modules_path()
-
-def install_dependencies():
-    modulespath = modules_path()
-
-    try:
-        from subprocess import run as sprun
-        try:
-            import pip
-        except:
-            print("Installing pip... "),
-            pyver = ""
-            if sys.platform != "win32":
-                pyver = "python{}.{}".format(
-                    sys.version_info.major,
-                    sys.version_info.minor
-                )
-
-            ensurepip = os.path.normpath(
-                os.path.join(
-                    os.path.dirname(bpy.app.binary_path_python),
-                    "..", "lib", pyver, "ensurepip"
-                )
-            )
-            # install pip using the user scheme using the Python
-            # version bundled with Blender
-            res = sprun([bpy.app.binary_path_python, ensurepip, "--user"])
-
-            if res.returncode == 0:
-                import pip
-            else:
-                raise Exception("Failed to install pip.")
-
-        print("Installing rhino3dm to {}... ".format(modulespath)),
-
-        # if we eventually want to pin a certain version
-        # we can add here something like "==0.0.5".
-        # for now assume latest available is ok
-        rhino3dm_version=""
-
-        pip3 = "pip3"
-        if sys.platform=="darwin":
-            pip3 = os.path.normpath(
-                os.path.join(
-                os.path.dirname(bpy.app.binary_path_python),
-                "..",
-                "bin",
-                pip3
-                )
-            )
-
-        # call pip in a subprocess so we don't have to mess
-        # with internals. Also, this ensures the Python used to
-        # install pip is going to be used
-        res = sprun([pip3, "install", "--upgrade", "--target", modulespath, "rhino3dm{}".format(rhino3dm_version)])
-        if res.returncode!=0:
-            print("Please try manually installing rhino3dm with: pip3 install --upgrade --target {} rhino3dm".format(modulespath))
-            raise Exception("Failed to install rhino3dm. See console for manual install instruction.")
-    except:
-        raise Exception("Failed to install dependencies. Please make sure you have pip installed.")
-
-
-# TODO: add update mechanism
 try:
     import rhino3dm as r3d
-except:
-    print("Failed to load rhino3dm, trying to install automatically...")
-    try:
-        install_dependencies()
-        # let user restart Blender, reloading of rhino3dm after automated
-        # install doesn't always work, better to just fail clearly before
-        # that
-        raise Exception("Please restart Blender.")
-    except:
-        raise
+except ModuleNotFoundError as error:
+    print("Rhino3dm not found. Attempting to install dependencies...")
+    from .install_dependencies import install_dependencies
+    install_dependencies()
 
 from . import converters
+
+'''
+Import Rhinoceros .3dm file
+'''
 
 def read_3dm(context, options):
 
