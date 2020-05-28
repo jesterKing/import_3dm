@@ -84,5 +84,48 @@ def populate_instance_definitions(context, model, toplayer, layername):
                         pass
 
 
+def find_collection(node, layername):
+    found = None
+    for c in node.children:
+        if(c.name == layername):
+            found = c
+            break
+        else:
+            found = find_collection(c,layername)
+    
+    return found
+    
+
+def set_instance_viewlayer(context, model, toplayer, layername): 
+    #set exclusion state for current view layer
+    current_vl = context.view_layer
+    current_vl_collection = find_collection(current_vl.layer_collection ,layername)
+
+    try:
+        current_vl_collection.exclude = True
+    except:
+        raise RuntimeWarning("Couldn't set exclusion state for Instance Definitions.")
+
+    
+    #get/create instance viewlayer and set exclusion states
+    try:    
+        instance_vl = context.scene.view_layers[layername]
+    except:
+        instance_vl = context.scene.view_layers.new(layername) 
+
+    instance_vl_collection = find_collection(instance_vl.layer_collection ,layername)
+
+    for c in instance_vl.active_layer_collection.children:
+        c.exclude = True    
+
+    try:
+        instance_vl_collection.exclude = False #keep only the instance definitions activated
+    except:
+        raise RuntimeWarning("Couldn't set exclusion state for Instance Definitions.")
+                
+    context.window.view_layer = instance_vl #set active view layer
+ 
+
+
 
 

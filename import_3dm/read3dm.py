@@ -250,4 +250,8 @@ def read_3dm(context, options):
     except Exception:
         pass
 
+    
+    if import_instances:
+        converters.set_instance_viewlayer(context, model, toplayer, "Instance Definitions")
+
     return {'FINISHED'}
