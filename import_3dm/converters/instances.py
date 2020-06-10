@@ -23,6 +23,7 @@
 import bpy
 import rhino3dm as r3d
 from mathutils import Matrix
+from mathutils import Vector
 from . import utils
 
 
@@ -51,14 +52,9 @@ def handle_instance_definitions(context, model, toplayer, layername):
 
 def import_instance_reference(context, ob, iref, name, scale, options):
     #TODO:  insert reduced mesh proxy and hide actual instance in viewport for better performance on large files
-    #import_instances = options.get("import_instances",False)
-    #if import_instances:
-        #add an empty and set it up as a collection instance pointing to the collection given in "n"
-    #iref = bpy.data.objects.new('empty', None)
-    iref.empty_display_size=1
+    iref.empty_display_size=0.5
     iref.empty_display_type='PLAIN_AXES'
     iref.instance_type='COLLECTION'
-    #iref.name=name+"_Instance"
     iref.instance_collection = utils.get_iddata(context.blend_data.collections,ob.Geometry.ParentIdefId,"",None)
     xform=list(ob.Geometry.Xform.ToFloatArray(1))
     xform=[xform[0:4],xform[4:8], xform[8:12], xform[12:16]]
@@ -66,20 +62,29 @@ def import_instance_reference(context, ob, iref, name, scale, options):
     xform[1][3]*=scale 
     xform[2][3]*=scale 
     iref.matrix_world = Matrix(xform)
-                        
-    #return iref
+                   
 
 def populate_instance_definitions(context, model, toplayer, layername):
+    count = 0
+    columns = 8
+    grid = 5
+
     #for every instance definition fish out the instance definition objects and link them to their parent 
     for idef in model.InstanceDefinitions:
         parent=utils.get_iddata(context.blend_data.collections, idef.Id, idef.Name, None)
         objectids=idef.GetObjectIds()
+
+        #calculate position offset to lay out block definitions in xy plane
+        offset = Vector((count%columns * grid, (count-count%columns)/columns * grid, 0 ))   
+        parent.instance_offset = offset #this sets the offset for the collection instances (read: resets the origin)
+        count +=1
 
         for ob in context.blend_data.objects:
             for uuid in objectids:
                 if ob.get('rhid',None) == str(uuid):
                     try:
                         parent.objects.link(ob)
+                        ob.location += offset #apply the previously calculated offset to all instance definition objects
                     except Exception:
                         pass
 
