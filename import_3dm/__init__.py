@@ -37,7 +37,7 @@ import bpy
 # ImportHelper is a helper class, defines filename and
 # invoke() function which calls the file selector.
 from bpy_extras.io_utils import ImportHelper
-from bpy.props import StringProperty, BoolProperty, EnumProperty
+from bpy.props import StringProperty, BoolProperty, EnumProperty, IntProperty
 from bpy.types import Operator
 
 from .read3dm import read_3dm
@@ -96,9 +96,22 @@ class Import3dm(Operator, ImportHelper):
     )
 
     import_instances: BoolProperty(
-        name="Blocks (Experimental)",
+        name="Blocks",
         description="Import blocks as collection instances.",
         default=False,
+    )
+
+    import_instances_grid_layout: BoolProperty(
+        name="Grid Layout",
+        description="Lay out block definitions in a grid ",
+        default=False,
+    )
+
+    import_instances_grid: IntProperty(
+        name="Grid",
+        description="Block layout grid size (in import units)",
+        default=10,
+        min=1,
     )
 
     update_materials: BoolProperty(
@@ -118,6 +131,8 @@ class Import3dm(Operator, ImportHelper):
             "import_groups":self.import_groups,
             "import_nested_groups":self.import_nested_groups,
             "import_instances":self.import_instances,
+            "import_instances_grid_layout":self.import_instances_grid_layout,
+            "import_instances_grid":self.import_instances_grid,
         }
         return read_3dm(context, options)
 
@@ -137,11 +152,17 @@ class Import3dm(Operator, ImportHelper):
         row.prop(self, "import_named_views")
 
         box = layout.box()       
-        box.label(text="Groups / Blocks")
+        box.label(text="Groups")
         row = box.row()
         row.prop(self, "import_groups")
         row.prop(self, "import_nested_groups")
+
+        box = layout.box()       
+        box.label(text="Blocks")
+        row = box.row()
         box.prop(self, "import_instances")
+        box.prop(self, "import_instances_grid_layout")
+        box.prop(self, "import_instances_grid")
 
         box = layout.box()       
         box.label(text="Materials")

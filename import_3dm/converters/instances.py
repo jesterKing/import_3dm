@@ -24,6 +24,7 @@ import bpy
 import rhino3dm as r3d
 from mathutils import Matrix
 from mathutils import Vector
+from math import sqrt
 from . import utils
 
 
@@ -64,27 +65,32 @@ def import_instance_reference(context, ob, iref, name, scale, options):
     iref.matrix_world = Matrix(xform)
                    
 
-def populate_instance_definitions(context, model, toplayer, layername):
-    count = 0
-    columns = 8
-    grid = 5
+def populate_instance_definitions(context, model, toplayer, layername, options, scale):
+    import_as_grid = options.get("import_instances_grid_layout",False)
+
+    if import_as_grid:
+        count = 0
+        columns = int(sqrt(len(model.InstanceDefinitions)))
+        grid = options.get("import_instances_grid",False) *scale
 
     #for every instance definition fish out the instance definition objects and link them to their parent 
     for idef in model.InstanceDefinitions:
         parent=utils.get_iddata(context.blend_data.collections, idef.Id, idef.Name, None)
         objectids=idef.GetObjectIds()
 
-        #calculate position offset to lay out block definitions in xy plane
-        offset = Vector((count%columns * grid, (count-count%columns)/columns * grid, 0 ))   
-        parent.instance_offset = offset #this sets the offset for the collection instances (read: resets the origin)
-        count +=1
+        if import_as_grid:
+            #calculate position offset to lay out block definitions in xy plane
+            offset = Vector((count%columns * grid, (count-count%columns)/columns * grid, 0 ))   
+            parent.instance_offset = offset #this sets the offset for the collection instances (read: resets the origin)
+            count +=1
 
         for ob in context.blend_data.objects:
             for uuid in objectids:
                 if ob.get('rhid',None) == str(uuid):
                     try:
                         parent.objects.link(ob)
-                        ob.location += offset #apply the previously calculated offset to all instance definition objects
+                        if import_as_grid:
+                            ob.location += offset #apply the previously calculated offset to all instance definition objects
                     except Exception:
                         pass
 
