@@ -240,7 +240,7 @@ def read_3dm(context, options):
             converters.handle_groups(context,attr,toplayer,import_nested_groups)
 
     if import_instances:
-        converters.populate_instance_definitions(context, model, toplayer, "Instance Definitions")
+        converters.populate_instance_definitions(context, model, toplayer, "Instance Definitions", options, scale)
 
     # finally link in the container collection (top layer) into the main
     # scene collection.
@@ -249,5 +249,9 @@ def read_3dm(context, options):
         bpy.ops.object.shade_smooth({'selected_editable_objects': toplayer.all_objects})
     except Exception:
         pass
+
+    
+    if import_instances:
+        converters.set_instance_viewlayer(context, model, toplayer, "Instance Definitions")
 
     return {'FINISHED'}

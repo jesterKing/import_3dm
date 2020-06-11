@@ -29,7 +29,7 @@ from .render_mesh import import_render_mesh
 from .curve import import_curve
 from .views import handle_views
 from .groups import handle_groups
-from .instances import import_instance_reference, handle_instance_definitions, populate_instance_definitions
+from .instances import import_instance_reference, handle_instance_definitions, populate_instance_definitions, set_instance_viewlayer
 from .pointcloud import import_pointcloud
 
 '''
@@ -81,7 +81,9 @@ def convert_object(context, ob, name, layer, rhinomat, view_color, scale, option
     for pair in ob.Geometry.GetUserStrings():
         blender_object[pair[0]] = pair[1]
 
-    try:
-        layer.objects.link(blender_object)
-    except Exception:
-        pass
+    #instance definition objects are linked within their definition collections
+    if not ob.Attributes.IsInstanceDefinitionObject:
+        try:
+            layer.objects.link(blender_object)
+        except Exception:
+            pass
