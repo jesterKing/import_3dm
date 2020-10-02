@@ -1,6 +1,6 @@
 # MIT License
 
-# Copyright (c) 2018-2019 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig 
+# Copyright (c) 2018-2020 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@ import sys
 import os
 import site
 
+
 def modules_path():
     # set up addons/modules under the user
     # script path. Here we'll install the
@@ -47,6 +48,7 @@ def modules_path():
     return modulespath
 
 modules_path()
+
 
 def install_dependencies():
     modulespath = modules_path()
@@ -124,6 +126,7 @@ except:
 
 from . import converters
 
+
 def read_3dm(context, options):
 
     filepath = options.get("filepath", "")
@@ -173,7 +176,7 @@ def read_3dm(context, options):
 
     #build skeletal hierarchy of instance definitions as collections (will be populated by object importer)
     if import_instances:
-        converters.handle_instance_definitions(context, model, toplayer, "Instance Definitions") 
+        converters.handle_instance_definitions(context, model, toplayer, "Instance Definitions")
 
     # Handle objects
     for ob in model.Objects:
@@ -185,7 +188,7 @@ def read_3dm(context, options):
             continue
 
         #convert_rhino_object = converters.RHINO_TYPE_TO_IMPORT[og.ObjectType]
-        
+
         # Check object and layer visibility
         attr = ob.Attributes
         if not attr.Visible and not import_hidden_objects:
@@ -201,7 +204,7 @@ def read_3dm(context, options):
             n = str(og.ObjectType).split(".")[1]+" " + str(attr.Id)
         else:
             n = attr.Name
-            
+
         # Get render material
         mat_index = ob.Attributes.MaterialIndex
 
@@ -227,7 +230,7 @@ def read_3dm(context, options):
         # Fetch layer
         layer = layerids[str(rhinolayer.Id)][1]
 
-        
+
         if og.ObjectType==r3d.ObjectType.InstanceReference and import_instances:
             n = model.InstanceDefinitions.FindId(og.ParentIdefId).Name
 
@@ -249,9 +252,5 @@ def read_3dm(context, options):
         bpy.ops.object.shade_smooth({'selected_editable_objects': toplayer.all_objects})
     except Exception:
         pass
-
-    
-    if import_instances:
-        converters.set_instance_viewlayer(context, model, toplayer, "Instance Definitions")
 
     return {'FINISHED'}

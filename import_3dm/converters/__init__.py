@@ -1,6 +1,6 @@
 # MIT License
 
-# Copyright (c) 2018-2019 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig 
+# Copyright (c) 2018-2020 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,7 @@ from .render_mesh import import_render_mesh
 from .curve import import_curve
 from .views import handle_views
 from .groups import handle_groups
-from .instances import import_instance_reference, handle_instance_definitions, populate_instance_definitions, set_instance_viewlayer
+from .instances import import_instance_reference, handle_instance_definitions, populate_instance_definitions
 from .pointcloud import import_pointcloud
 
 '''
@@ -67,7 +67,7 @@ def convert_object(context, ob, name, layer, rhinomat, view_color, scale, option
         blender_object = utils.get_iddata(context.blend_data.objects, ob.Attributes.Id, ob.Attributes.Name, data)
     else:
         blender_object = context.blend_data.objects.new(name+"_Instance", None)
-        utils.tag_data(blender_object, ob.Attributes.Id, ob.Attributes.Name)        
+        utils.tag_data(blender_object, ob.Attributes.Id, ob.Attributes.Name)
 
     blender_object.color = [x/255. for x in view_color]
 

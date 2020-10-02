@@ -1,6 +1,6 @@
 # MIT License
 
-# Copyright (c) 2018-2019 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig 
+# Copyright (c) 2018-2020 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -140,31 +140,31 @@ class Import3dm(Operator, ImportHelper):
         layout = self.layout
         layout.label(text="Import .3dm v{}.{}.{}".format(bl_info["version"][0], bl_info["version"][1], bl_info["version"][2]))
 
-        box = layout.box()       
+        box = layout.box()
         box.label(text="Visibility")
         box.prop(self, "import_hidden_objects")
         box.prop(self, "import_hidden_layers")
 
-        box = layout.box()       
+        box = layout.box()
         box.label(text="Views")
         row = box.row()
         row.prop(self, "import_views")
         row.prop(self, "import_named_views")
 
-        box = layout.box()       
+        box = layout.box()
         box.label(text="Groups")
         row = box.row()
         row.prop(self, "import_groups")
         row.prop(self, "import_nested_groups")
 
-        box = layout.box()       
+        box = layout.box()
         box.label(text="Blocks")
         row = box.row()
         box.prop(self, "import_instances")
         box.prop(self, "import_instances_grid_layout")
         box.prop(self, "import_instances_grid")
 
-        box = layout.box()       
+        box = layout.box()
         box.label(text="Materials")
         box.prop(self, "update_materials")
 
