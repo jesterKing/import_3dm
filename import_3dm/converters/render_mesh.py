@@ -58,6 +58,7 @@ def import_render_mesh(context, ob, name, scale, options):
     fidx = 0
     faces = []
     vertices = []
+    colors = []
     # now add all faces and vertices to the main lists
     for m in msh:
         if not m:
@@ -73,9 +74,20 @@ def import_render_mesh(context, ob, name, scale, options):
 
         fidx = fidx + len(m.Vertices)
         vertices.extend([(m.Vertices[v].X * scale, m.Vertices[v].Y * scale, m.Vertices[v].Z * scale) for v in range(len(m.Vertices))])
+
+        if len(m.VertexColors) > 0:
+            colors.extend([(m.VertexColors[v][0] / 255., m.VertexColors[v][1] / 255., m.VertexColors[v][2] / 255., m.VertexColors[v][3] / 255.) for v in range(len(m.VertexColors))])
     
     mesh = context.blend_data.meshes.new(name=name)
     mesh.from_pydata(vertices, [], faces)
+
+    # if it has vertex colors, add them
+    if len(colors) > 0:
+        vcol_layer = mesh.vertex_colors.new()
+        for poly in mesh.polygons:
+            for loop_index in poly.loop_indices:
+                loop_vert_index = mesh.loops[loop_index].vertex_index
+                vcol_layer.data[loop_index].color = colors[loop_vert_index]
 
     # done, now add object to blender
 
