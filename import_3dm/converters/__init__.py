@@ -1,6 +1,6 @@
 # MIT License
 
-# Copyright (c) 2018-2019 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig 
+# Copyright (c) 2018-2020 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -67,7 +67,7 @@ def convert_object(context, ob, name, layer, rhinomat, view_color, scale, option
         blender_object = utils.get_iddata(context.blend_data.objects, ob.Attributes.Id, ob.Attributes.Name, data)
     else:
         blender_object = context.blend_data.objects.new(name+"_Instance", None)
-        utils.tag_data(blender_object, ob.Attributes.Id, ob.Attributes.Name)        
+        utils.tag_data(blender_object, ob.Attributes.Id, ob.Attributes.Name)
 
     blender_object.color = [x/255. for x in view_color]
 
@@ -81,7 +81,9 @@ def convert_object(context, ob, name, layer, rhinomat, view_color, scale, option
     for pair in ob.Geometry.GetUserStrings():
         blender_object[pair[0]] = pair[1]
 
-    try:
-        layer.objects.link(blender_object)
-    except Exception:
-        pass
+    #instance definition objects are linked within their definition collections
+    if not ob.Attributes.IsInstanceDefinitionObject:
+        try:
+            layer.objects.link(blender_object)
+        except Exception:
+            pass

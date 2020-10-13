@@ -1,6 +1,6 @@
 # MIT License
 
-# Copyright (c) 2018-2019 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig 
+# Copyright (c) 2018-2020 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
 bl_info = {
     "name": "Import Rhinoceros 3D",
     "author": "Nathan 'jesterKing' Letwory, Joel Putnam, Tom Svilans, Lukas Fertig",
-    "version": (0, 0, 7),
+    "version": (0, 0, 8),
     "blender": (2, 80, 0),
     "location": "File > Import > Rhinoceros 3D (.3dm)",
     "description": "This addon lets you import Rhinoceros 3dm files",
@@ -37,7 +37,7 @@ import bpy
 # ImportHelper is a helper class, defines filename and
 # invoke() function which calls the file selector.
 from bpy_extras.io_utils import ImportHelper
-from bpy.props import StringProperty, BoolProperty, EnumProperty
+from bpy.props import StringProperty, BoolProperty, EnumProperty, IntProperty
 from bpy.types import Operator
 
 from .read3dm import read_3dm
@@ -96,9 +96,22 @@ class Import3dm(Operator, ImportHelper):
     )
 
     import_instances: BoolProperty(
-        name="Blocks (Experimental)",
+        name="Blocks",
         description="Import blocks as collection instances.",
         default=False,
+    )
+
+    import_instances_grid_layout: BoolProperty(
+        name="Grid Layout",
+        description="Lay out block definitions in a grid ",
+        default=False,
+    )
+
+    import_instances_grid: IntProperty(
+        name="Grid",
+        description="Block layout grid size (in import units)",
+        default=10,
+        min=1,
     )
 
     update_materials: BoolProperty(
@@ -118,6 +131,8 @@ class Import3dm(Operator, ImportHelper):
             "import_groups":self.import_groups,
             "import_nested_groups":self.import_nested_groups,
             "import_instances":self.import_instances,
+            "import_instances_grid_layout":self.import_instances_grid_layout,
+            "import_instances_grid":self.import_instances_grid,
         }
         return read_3dm(context, options)
 
@@ -125,25 +140,31 @@ class Import3dm(Operator, ImportHelper):
         layout = self.layout
         layout.label(text="Import .3dm v{}.{}.{}".format(bl_info["version"][0], bl_info["version"][1], bl_info["version"][2]))
 
-        box = layout.box()       
+        box = layout.box()
         box.label(text="Visibility")
         box.prop(self, "import_hidden_objects")
         box.prop(self, "import_hidden_layers")
 
-        box = layout.box()       
+        box = layout.box()
         box.label(text="Views")
         row = box.row()
         row.prop(self, "import_views")
         row.prop(self, "import_named_views")
 
-        box = layout.box()       
-        box.label(text="Groups / Blocks")
+        box = layout.box()
+        box.label(text="Groups")
         row = box.row()
         row.prop(self, "import_groups")
         row.prop(self, "import_nested_groups")
-        box.prop(self, "import_instances")
 
-        box = layout.box()       
+        box = layout.box()
+        box.label(text="Blocks")
+        row = box.row()
+        box.prop(self, "import_instances")
+        box.prop(self, "import_instances_grid_layout")
+        box.prop(self, "import_instances_grid")
+
+        box = layout.box()
         box.label(text="Materials")
         box.prop(self, "update_materials")
 
