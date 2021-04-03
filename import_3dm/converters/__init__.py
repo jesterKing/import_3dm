@@ -22,7 +22,6 @@
 
 import rhino3dm as r3d
 
-
 from .material import handle_materials, material_name, DEFAULT_RHINO_MATERIAL
 from .layers import handle_layers
 from .render_mesh import import_render_mesh
@@ -40,6 +39,7 @@ RHINO_TYPE_TO_IMPORT = {
     r3d.ObjectType.Brep : import_render_mesh,
     r3d.ObjectType.Extrusion : import_render_mesh,
     r3d.ObjectType.Mesh : import_render_mesh,
+    r3d.ObjectType.SubD : import_render_mesh,
     r3d.ObjectType.Curve : import_curve,
     r3d.ObjectType.PointSet: import_pointcloud,
     #r3d.ObjectType.InstanceReference : import_instance_reference
@@ -73,6 +73,13 @@ def convert_object(context, ob, name, layer, rhinomat, view_color, scale, option
 
     if ob.Geometry.ObjectType == r3d.ObjectType.InstanceReference and options.get("import_instances",False):
         import_instance_reference(context, ob, blender_object, name, scale, options)
+
+    # If subd, apply subdivision modifier
+    if ob.Geometry.ObjectType == r3d.ObjectType.SubD:
+        level = 3
+        blender_object.modifiers.new(type="SUBSURF", name="SubD")
+        blender_object.modifiers["SubD"].levels = level
+        blender_object.modifiers["SubD"].render_levels = level
 
     # Import Rhino user strings
     for pair in ob.Attributes.GetUserStrings():
