@@ -76,10 +76,11 @@ def convert_object(context, ob, name, layer, rhinomat, view_color, scale, option
 
     # If subd, apply subdivision modifier
     if ob.Geometry.ObjectType == r3d.ObjectType.SubD:
-        level = 3
-        blender_object.modifiers.new(type="SUBSURF", name="SubD")
-        blender_object.modifiers["SubD"].levels = level
-        blender_object.modifiers["SubD"].render_levels = level
+        if blender_object.modifiers.find("SubD") == -1:
+            level = 3
+            blender_object.modifiers.new(type="SUBSURF", name="SubD")
+            blender_object.modifiers["SubD"].levels = level
+            blender_object.modifiers["SubD"].render_levels = level
 
     # Import Rhino user strings
     for pair in ob.Attributes.GetUserStrings():
