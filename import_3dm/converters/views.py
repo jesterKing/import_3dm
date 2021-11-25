@@ -63,8 +63,13 @@ def handle_view(context, view, name, scale):
         return blobj
 
 def handle_views(context, model, layer, views, layer_name, scale):
-    
-    viewLayer = context.blend_data.collections.new(name=layer_name)
+
+    collection_is_new = False
+    if layer_name in context.blend_data.collections:
+        viewLayer = context.blend_data.collections[layer_name]
+    else:
+        viewLayer = context.blend_data.collections.new(name=layer_name)
+        collection_is_new = True
 
     for v in views:
         camera = handle_view(context, v, "RhinoView_" + v.Name, scale)
@@ -73,4 +78,5 @@ def handle_views(context, model, layer, views, layer_name, scale):
         except Exception:
             pass
 
-    layer.children.link(viewLayer)
+    if collection_is_new:
+        layer.children.link(viewLayer)
