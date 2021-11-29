@@ -40,6 +40,9 @@ def handle_layers(context, model, toplayer, layerids, materials, update, import_
                 toplayer.children.link(layer_col)
             except Exception:
                 pass
+    else:
+        #If "Layers" collection is in place, we assume the plugin had imported 3dm before
+        layer_col = context.blend_data.collections[layer_col_id]
 
     # build lookup table for LayerTable index
     # from GUID, create collection for each
