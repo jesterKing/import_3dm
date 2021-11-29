@@ -113,16 +113,10 @@ def install_dependencies():
 # TODO: add update mechanism
 try:
     import rhino3dm as r3d
-except:
-    print("Failed to load rhino3dm, trying to install automatically...")
-    try:
-        install_dependencies()
-        # let user restart Blender, reloading of rhino3dm after automated
-        # install doesn't always work, better to just fail clearly before
-        # that
-        raise Exception("Please restart Blender.")
-    except:
-        raise
+except ModuleNotFoundError as error:
+    print("Rhino3dm not found. Attempting to install dependencies...")
+    from .install_dependencies import install_dependencies
+    install_dependencies()
 
 from . import converters
 
