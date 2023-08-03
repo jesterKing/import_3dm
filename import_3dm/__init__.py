@@ -154,7 +154,6 @@ class Import3dm(Operator, ImportHelper):
             "create_instance_files":self.create_instance_files,
             "overwrite":self.overwrite,
         }
-
         return read_3dm(context, options, block_toggle = True)
 
     def draw(self, context):

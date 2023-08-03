@@ -127,25 +127,6 @@ except:
 
 from . import converters
 
-def clear_memory():
-    bpy.ops.object.select_all(action='SELECT')
-    bpy.ops.object.delete()
-
-    bpy.ops.collection.select_all(action='SELECT')
-    bpy.ops.collection.delete()
-
-    bpy.ops.material.select_all(action='SELECT')
-    bpy.ops.material.delete()
-
-    bpy.ops.text.select_all(action='SELECT')
-    bpy.ops.text.delete()
-
-    bpy.ops.image.select_all(action='SELECT')
-    bpy.ops.image.delete()
-
-    bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.mesh.delete()
-
 def read_3dm(context, options, block_toggle):
 
     filepath = options.get("filepath", "")
