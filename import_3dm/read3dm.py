@@ -114,22 +114,44 @@ def install_dependencies():
 try:
     import rhino3dm as r3d
 except:
-    print("Failed to load rhino3dm, trying to install automatically...")
-    try:
-        install_dependencies()
-        # let user restart Blender, reloading of rhino3dm after automated
-        # install doesn't always work, better to just fail clearly before
-        # that
-        raise Exception("Please restart Blender.")
-    except:
-        raise
+    if not sys.platform in ('darwin', 'win32'):
+        print("Failed to load rhino3dm, trying to install automatically...")
+        try:
+            install_dependencies()
+            # let user restart Blender, reloading of rhino3dm after automated
+            # install doesn't always work, better to just fail clearly before
+            # that
+            raise Exception("Please restart Blender.")
+        except:
+            raise
 
 from . import converters
 
+def clear_memory():
+    bpy.ops.object.select_all(action='SELECT')
+    bpy.ops.object.delete()
 
-def read_3dm(context, options):
+    bpy.ops.collection.select_all(action='SELECT')
+    bpy.ops.collection.delete()
+
+    bpy.ops.material.select_all(action='SELECT')
+    bpy.ops.material.delete()
+
+    bpy.ops.text.select_all(action='SELECT')
+    bpy.ops.text.delete()
+
+    bpy.ops.image.select_all(action='SELECT')
+    bpy.ops.image.delete()
+
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.delete()
+
+def read_3dm(context, options, block_toggle):
 
     filepath = options.get("filepath", "")
+    if block_toggle:
+        initial_file_3dm   = filepath
+        initial_file_blend = bpy.data.filepath
     model = None
 
     try:
@@ -158,8 +180,9 @@ def read_3dm(context, options):
     import_groups = options.get("import_groups", False)
     import_nested_groups = options.get("import_nested_groups", False)
     import_instances = options.get("import_instances",False)
+    create_instance_files = options.get("create_instance_files", False)
+    overwrite = options.get("overwrite", False)
     update_materials = options.get("update_materials", False)
-
 
     # Import Views and NamedViews
     if import_views:
@@ -175,8 +198,8 @@ def read_3dm(context, options):
     materials[converters.DEFAULT_RHINO_MATERIAL] = None
 
     #build skeletal hierarchy of instance definitions as collections (will be populated by object importer)
-    if import_instances:
-        converters.handle_instance_definitions(context, model, toplayer, "Instance Definitions")
+    if import_instances or create_instance_files:
+        instance_properties = converters.handle_instance_definitions(context, model, toplayer, "Instance Definitions")
 
     # Handle objects
     for ob in model.Objects:
@@ -252,5 +275,111 @@ def read_3dm(context, options):
         bpy.ops.object.shade_smooth({'selected_editable_objects': toplayer.all_objects})
     except Exception:
         pass
+    
+    # Create Blender files for each linked block instance
+    if create_instance_files and block_toggle:
+        for instance in instance_properties:
+            if str(instance['UpdateType']) != "InstanceDefinitionUpdateType.Static":
+        
+                # Skip file creation if overwrite toggle is disabled
+                if os.path.isfile(instance['SourceArchive'].replace("3dm", "blend")) and not overwrite:
+                    pass
+                else:
+                    filepath = instance['SourceArchive']
+                    options["filepath"] = filepath
+                    try:
+                        nuke_everything(50)
+                        read_3dm(context, options, block_toggle=False)
+                    except Exception:
+                        print("Failed to create file: ", filepath)
+    
+    if create_instance_files:
+    
+        # Save .blend file and delete its contents before moving on to the next
+        if block_toggle == False:      
+            filepath_blend = filepath.replace('.3dm', '.blend')
+            bpy.ops.wm.save_as_mainfile(filepath=filepath_blend)
+            nuke_everything(50)
+            
+        # Import the original model
+        elif block_toggle == True:
+            # Open the original Blender file
+            bpy.ops.wm.open_mainfile(filepath=initial_file_blend)
+            options["filepath"] = initial_file_3dm
+            read_3dm(context, options, block_toggle = None)
+            
+        # Link all block files after importing the original model
+        elif block_toggle == None:
+            link_all(instance_properties)
+
+    # Only link block files
+    if import_instances and not create_instance_files:
+        link_all(instance_properties)
 
     return {'FINISHED'}
+
+
+# Delete all objects and collections and purge orphan data as many times as needed
+# amount value is currently a workaround because I couldn't find a way to purge everything elegantly
+def nuke_everything(amount):
+    
+    # Delete all world data
+    for world in bpy.data.worlds:
+        bpy.data.worlds.remove(world)
+        
+    # Create a new world shader and set it as active
+    new_world = bpy.data.worlds.new(name="World")
+    bpy.context.scene.world = new_world
+    
+    for data in range(amount):
+    
+        # Select all collections
+        bpy.ops.outliner.orphans_purge()
+
+        # Get the root collection
+        root_collection = bpy.context.scene.collection
+
+        # Recursively delete all collections except the root collection
+        for collection in root_collection.children:
+            bpy.data.collections.remove(collection, do_unlink=True)
+
+
+# Locates files corresponding to Instance Definitions and populates instances through linking
+def link_all(instance_properties):
+    linked_collections = set()  # Set to keep track of already linked collections
+    failed_link_paths = []
+    failed_link_collections = []
+    for instance in instance_properties:
+        if str(instance['UpdateType']) ==  "InstanceDefinitionUpdateType.Linked":
+            source_archive = instance['SourceArchive']
+            
+            for ob in bpy.data.objects:
+                if ob.name.endswith("_Instance"):
+                    existing_collection_name = instance['Name']  
+                    
+                    if ob.name == existing_collection_name + "_Instance":
+                        file_path = instance['SourceArchive'].replace(".3dm",".blend")                        
+                        existing_collection = bpy.data.collections.get(existing_collection_name)
+                        linked_collection_name = os.path.basename(instance['SourceArchive']).split('/')[-1].replace(".3dm","")
+                        
+                        try:
+                            with bpy.data.libraries.load(file_path) as (data_from, data_to):
+                                data_to.collections = [linked_collection_name]
+                            
+                            for collection in data_to.collections:
+                                if existing_collection:
+                                    existing_collection.children.link(collection)
+                                else:
+                                    bpy.context.scene.collection.children.link(collection)
+                                    
+                            print("The Collection \"" + linked_collection_name + "\" was successfully linked!")
+                        except Exception:
+                            print("The Collection \"" + linked_collection_name + "\" couldn't be linked.")
+                            failed_link_paths.append(file_path)
+                            failed_link_collections.append(linked_collection_name)
+    
+    if failed_link_paths is not None:
+        for i in range(len(failed_link_paths)):
+            print("Couldn't link collection \"" + failed_link_collections[i] + "\" at location: " + failed_link_paths[i])
+    else:
+        print("All Collections have been successfully linked!")

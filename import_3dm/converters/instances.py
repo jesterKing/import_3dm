@@ -44,7 +44,9 @@ def handle_instance_definitions(context, model, toplayer, layername):
             instance_col.hide_render = True
             instance_col.hide_viewport = True
             toplayer.children.link(instance_col)
-
+    
+    instance_properties = []
+    
     for idef in model.InstanceDefinitions:
         idef_col=utils.get_iddata(context.blend_data.collections,idef.Id, idef.Name, None )
 
@@ -52,6 +54,12 @@ def handle_instance_definitions(context, model, toplayer, layername):
             instance_col.children.link(idef_col)
         except Exception:
             pass
+        
+        # Save relevant block data for handling of linked block files        
+        instance_dict = {"Name":idef.Name, "SourceArchive":idef.SourceArchive, "UpdateType":idef.UpdateType}
+        instance_properties.append(instance_dict)
+    
+    return instance_properties
 
 def import_instance_reference(context, ob, iref, name, scale, options):
     #TODO:  insert reduced mesh proxy and hide actual instance in viewport for better performance on large files

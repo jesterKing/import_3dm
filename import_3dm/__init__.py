@@ -113,6 +113,18 @@ class Import3dm(Operator, ImportHelper):
         default=10,
         min=1,
     )
+    
+    create_instance_files: BoolProperty(
+        name="Auto-Create Linked Block Files",
+        description="Atomatically convert each .3dm block file into a .blend file. (SAVE BEFORE ENABLING THIS)",
+        default=False,
+    )
+    
+    overwrite: BoolProperty(
+        name="Overwrite",
+        description="Overwrite existing .blend files that contain block definitions.",
+        default=False,
+    )
 
     update_materials: BoolProperty(
         name="Update Materials",
@@ -121,6 +133,12 @@ class Import3dm(Operator, ImportHelper):
     )
 
     def execute(self, context):
+        # Check if the file is unsaved and create_instance_files is True
+        # Abort operation
+        if bpy.data.filepath == "" and self.create_instance_files:
+            self.report({'ERROR_INVALID_INPUT'}, "Save your file before trying to create any linked block files.")
+            return {'CANCELLED'}
+        
         options = {
             "filepath":self.filepath,
             "import_views":self.import_views,
@@ -133,8 +151,11 @@ class Import3dm(Operator, ImportHelper):
             "import_instances":self.import_instances,
             "import_instances_grid_layout":self.import_instances_grid_layout,
             "import_instances_grid":self.import_instances_grid,
+            "create_instance_files":self.create_instance_files,
+            "overwrite":self.overwrite,
         }
-        return read_3dm(context, options)
+
+        return read_3dm(context, options, block_toggle = True)
 
     def draw(self, context):
         layout = self.layout
@@ -163,6 +184,17 @@ class Import3dm(Operator, ImportHelper):
         box.prop(self, "import_instances")
         box.prop(self, "import_instances_grid_layout")
         box.prop(self, "import_instances_grid")
+        
+        nested_box = box.box()
+        nested_box.label(text="Linked Blocks (Save before using!)")
+        nested_box.prop(self, "create_instance_files")
+        nested_box.prop(self, "overwrite")
+
+        # # Check if the file is unsaved
+        # if bpy.data.is_dirty:
+            # box = layout.box()
+            # box.label(text="Unsaved File")
+            # box.operator("wm.save_mainfile", text="Save")
 
         box = layout.box()
         box.label(text="Materials")
