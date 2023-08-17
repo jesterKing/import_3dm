@@ -22,6 +22,7 @@
 
 import bpy
 import rhino3dm as r3d
+import os
 from mathutils import Matrix
 from mathutils import Vector
 from math import sqrt
@@ -34,7 +35,7 @@ from . import utils
 #proper exception handling
 
 
-def handle_instance_definitions(context, model, toplayer, layername):
+def handle_instance_definitions(context, model, toplayer, layername, filepath3dm):
     """
     import instance definitions from rhino model as empty collections
     """
@@ -48,15 +49,42 @@ def handle_instance_definitions(context, model, toplayer, layername):
     instance_properties = []
     
     for idef in model.InstanceDefinitions:
-        idef_col=utils.get_iddata(context.blend_data.collections,idef.Id, idef.Name, None )
+        idef_col = utils.get_iddata(context.blend_data.collections, idef.Id, idef.Name, None)
 
         try:
             instance_col.children.link(idef_col)
         except Exception:
             pass
+
+        name = idef.Name
+
+        if os.path.isfile(idef.SourceArchive):
+            source_archive = idef.SourceArchive
+        # Look for file in sub-directories
+        elif str(idef.UpdateType) != "InstanceDefinitionUpdateType.Static":
+            name3dm = os.path.basename(idef.SourceArchive)
+            dirname = os.path.dirname(filepath3dm)
+            match = False
+            for root, dirs, files in os.walk(dirname):
+                for file in files:
+                    if ".3dm" in file:
+                        if name3dm.lower() == file.lower():
+                            source_archive = os.path.join(root, file)
+                            print("Changed source archive from " + idef.SourceArchive + " to " + source_archive)
+                            match = True
+                            break
+                if match:
+                    break
+            if not match:
+                source_archive = idef.SourceArchive
+                print("File \"" + name3dm + "\" could not be found!")
+        else:
+            source_archive = ""
+                
+        update_type = idef.UpdateType
         
-        # Save relevant block data for handling of linked block files        
-        instance_dict = {"Name":idef.Name, "SourceArchive":idef.SourceArchive, "UpdateType":idef.UpdateType}
+        # Save relevant block data for handling of linked block files
+        instance_dict = {"Name":name, "SourceArchive":source_archive, "UpdateType":update_type}
         instance_properties.append(instance_dict)
     
     return instance_properties

@@ -127,12 +127,32 @@ except:
 
 from . import converters
 
+def clear_memory():
+    bpy.ops.object.select_all(action='SELECT')
+    bpy.ops.object.delete()
+
+    bpy.ops.collection.select_all(action='SELECT')
+    bpy.ops.collection.delete()
+
+    bpy.ops.material.select_all(action='SELECT')
+    bpy.ops.material.delete()
+
+    bpy.ops.text.select_all(action='SELECT')
+    bpy.ops.text.delete()
+
+    bpy.ops.image.select_all(action='SELECT')
+    bpy.ops.image.delete()
+
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.delete()
+
 def read_3dm(context, options, block_toggle):
 
     filepath = options.get("filepath", "")
-    if block_toggle:
+    if block_toggle != False:
         initial_file_3dm   = filepath
         initial_file_blend = bpy.data.filepath
+        initial_import_instances = options.get("import_instances",False)
     model = None
 
     try:
@@ -179,8 +199,8 @@ def read_3dm(context, options, block_toggle):
     materials[converters.DEFAULT_RHINO_MATERIAL] = None
 
     #build skeletal hierarchy of instance definitions as collections (will be populated by object importer)
-    if import_instances or create_instance_files:
-        instance_properties = converters.handle_instance_definitions(context, model, toplayer, "Instance Definitions")
+    if import_instances: #or create_instance_files:
+        instance_properties = converters.handle_instance_definitions(context, model, toplayer, "Instance Definitions", initial_file_3dm)
 
     # Handle objects
     for ob in model.Objects:
@@ -268,6 +288,7 @@ def read_3dm(context, options, block_toggle):
                 else:
                     filepath = instance['SourceArchive']
                     options["filepath"] = filepath
+                    options["import_instances"] = False
                     try:
                         nuke_everything(50)
                         read_3dm(context, options, block_toggle=False)
@@ -287,6 +308,7 @@ def read_3dm(context, options, block_toggle):
             # Open the original Blender file
             bpy.ops.wm.open_mainfile(filepath=initial_file_blend)
             options["filepath"] = initial_file_3dm
+            options["import_instances"] = initial_import_instances
             read_3dm(context, options, block_toggle = None)
             
         # Link all block files after importing the original model
@@ -296,7 +318,8 @@ def read_3dm(context, options, block_toggle):
     # Only link block files
     if import_instances and not create_instance_files:
         link_all(instance_properties)
-
+    if block_toggle:
+        print("Import complete!")
     return {'FINISHED'}
 
 
@@ -327,7 +350,6 @@ def nuke_everything(amount):
 
 # Locates files corresponding to Instance Definitions and populates instances through linking
 def link_all(instance_properties):
-    linked_collections = set()  # Set to keep track of already linked collections
     failed_link_paths = []
     failed_link_collections = []
     for instance in instance_properties:
@@ -355,7 +377,7 @@ def link_all(instance_properties):
                                     
                             print("The Collection \"" + linked_collection_name + "\" was successfully linked!")
                         except Exception:
-                            print("The Collection \"" + linked_collection_name + "\" couldn't be linked.")
+                            print("Failed to link collection \"" + linked_collection_name + "\"")
                             failed_link_paths.append(file_path)
                             failed_link_collections.append(linked_collection_name)
     
