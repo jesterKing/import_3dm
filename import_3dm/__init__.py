@@ -98,7 +98,7 @@ class Import3dm(Operator, ImportHelper):
     import_instances: BoolProperty(
         name="Blocks",
         description="Import blocks as collection instances.",
-        default=False,
+        default=True,
     )
 
     import_instances_grid_layout: BoolProperty(
@@ -120,7 +120,7 @@ class Import3dm(Operator, ImportHelper):
         default=True,
     )
 
-    def execute(self, context):
+    def execute(self, context : bpy.context):
         options = {
             "filepath":self.filepath,
             "import_views":self.import_views,
