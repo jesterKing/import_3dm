@@ -1,6 +1,6 @@
 # MIT License
 
-# Copyright (c) 2018-2019 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig 
+# Copyright (c) 2018-2019 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -54,7 +54,7 @@ def import_render_mesh(context, ob, name, scale, options):
     elif og.ObjectType == r3d.ObjectType.Mesh:
         msh = [og]
     elif og.ObjectType == r3d.ObjectType.SubD:
-        msh = [r3d.Mesh.CreateFromSubDControlNet(og)]
+        msh = [r3d.Mesh.CreateFromSubDControlNet(og, True)]
     elif og.ObjectType == r3d.ObjectType.Brep:
         msh = [og.Faces[f].GetMesh(r3d.MeshType.Any) for f in range(len(og.Faces)) if type(og.Faces[f])!=list]
     fidx = 0
@@ -78,19 +78,19 @@ def import_render_mesh(context, ob, name, scale, options):
         fidx = fidx + len(m.Vertices)
         vertices.extend([(m.Vertices[v].X * scale, m.Vertices[v].Y * scale, m.Vertices[v].Z * scale) for v in range(len(m.Vertices))])
         coords.extend([(m.TextureCoordinates[v].X, m.TextureCoordinates[v].Y) for v in range(len(m.TextureCoordinates))])
-   
+
     mesh = context.blend_data.meshes.new(name=name)
     mesh.from_pydata(vertices, [], faces)
 
-    
+
     if mesh.loops and len(coords) == len(vertices):
-        # todo: 
+        # todo:
         # * check for multiple mappings and handle them
         # * get mapping name (missing from rhino3dm)
         # * rhino assigns a default mapping to unmapped objects, so if nothing is specified, this will be imported
 
         #create a new uv_layer and copy texcoords from input mesh
-        mesh.uv_layers.new(name="RhinoUVMap") 
+        mesh.uv_layers.new(name="RhinoUVMap")
 
         if sum(len(x) for x in faces) == len(mesh.uv_layers["RhinoUVMap"].data):
             uvl = mesh.uv_layers["RhinoUVMap"].data[:]
@@ -100,7 +100,7 @@ def import_render_mesh(context, ob, name, scale, options):
 
             mesh.validate()
             mesh.update()
-        
+
         else:
             #in case there was a data mismatch, cleanup the created layer
             mesh.uv_layers.remove(mesh.uv_layers["RhinoUVMap"])
@@ -109,6 +109,6 @@ def import_render_mesh(context, ob, name, scale, options):
 
     # done, now add object to blender
 
-    
+
     return mesh
     #add_object(context, n, Name, Id, vertices, faces, layer, rhinomat)
