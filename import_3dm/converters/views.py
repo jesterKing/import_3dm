@@ -1,6 +1,6 @@
 # MIT License
 
-# Copyright (c) 2018-2019 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig 
+# Copyright (c) 2018-2024 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -36,15 +36,16 @@ def handle_view(context, view, name, scale):
             [0,0,0,1]])
 
         mat.invert()
-        
+
         mat[0][3] = vp.CameraLocation.X * scale
         mat[1][3] = vp.CameraLocation.Y * scale
         mat[2][3] = vp.CameraLocation.Z * scale
-        
+
         lens = vp.Camera35mmLensLength
-        
-        blcam = utils.get_iddata(context.blend_data.cameras, None, name, None)   
-            
+
+        tags = utils.create_tag_dict(None, name)
+        blcam = utils.get_or_create_iddata(context.blend_data.cameras, tags, None)
+
         # Set camera to perspective or parallel
         if vp.IsPerspectiveProjection:
             blcam.type = "PERSP"
@@ -54,11 +55,11 @@ def handle_view(context, view, name, scale):
             blcam.type = "ORTHO"
             frustum = vp.GetFrustum()
             blcam.ortho_scale = (frustum['right'] - frustum['left']) * scale
-            
+
         # Link camera data to new object
-        blobj = utils.get_iddata(context.blend_data.objects, None, name, blcam)
+        blobj = utils.get_or_create_iddata(context.blend_data.objects, tags, blcam)
         blobj.matrix_world = mat
-            
+
         # Return new camera
         return blobj
 

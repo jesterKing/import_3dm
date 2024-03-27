@@ -1,6 +1,6 @@
 # MIT License
 
-# Copyright (c) 2018-2019 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig 
+# Copyright (c) 2018-2024 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,18 +25,18 @@ from . import utils
 
 
 def import_pointcloud(context, ob, name, scale, options):
-    
+
     og = ob.Geometry
     oa = ob.Attributes
 
     # add points as mesh vertices
 
     # The following line crashes. Seems rhino3dm does not like iterating over pointclouds.
-    #vertices = [(p.X * scale, p.Y * scale, p.Z * scale) for p in og] 
+    #vertices = [(p.X * scale, p.Y * scale, p.Z * scale) for p in og]
 
     vertices = [(og[v].X * scale, og[v].Y * scale, og[v].Z * scale) for v in range(og.Count)]
-    
+
     pointcloud = context.blend_data.meshes.new(name=name)
     pointcloud.from_pydata(vertices, [], [])
-    
+
     return pointcloud

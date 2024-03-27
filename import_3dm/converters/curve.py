@@ -1,6 +1,6 @@
 # MIT License
 
-# Copyright (c) 2018-2019 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig 
+# Copyright (c) 2018-2024 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -82,7 +82,7 @@ def import_nurbs_curve(rcurve, bcurve, scale):
     #nurbs.use_bezier_u = True
     nurbs.use_endpoint_u = True
     nurbs.order_u = rcurve.Order
-            
+
     return nurbs
 
 CONVERT[r3d.NurbsCurve] = import_nurbs_curve
@@ -134,7 +134,7 @@ def import_arc(rcurve, bcurve, scale):
     '''
 
     arc.use_endpoint_u = True
-    arc.order_u = 3    
+    arc.order_u = 3
 
     return arc
 

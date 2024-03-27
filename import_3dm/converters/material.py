@@ -1,6 +1,6 @@
 # MIT License
 
-# Copyright (c) 2018-2019 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig 
+# Copyright (c) 2018-2024 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,13 +26,17 @@ import bpy
 import rhino3dm as r3d
 from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
 from . import utils
+from . import rdk_manager
+
+from typing import Tuple
 
 ### default Rhino material name
 DEFAULT_RHINO_MATERIAL = "Rhino Default Material"
 
 #### material hashing functions
 
-_black = (0, 0, 0, 255)
+_black = (0, 0, 0, 1.0)
+_white = (0.2, 1.0, 0.6, 1.0)
 
 
 def Bbytes(b):
@@ -97,46 +101,90 @@ def hash_material(M):
     crc = binascii.crc32(tobytes(M.Transparency), crc)
     return crc
 
+def get_color_field(rm : r3d.RenderMaterial, field_name : str) -> Tuple[float, float, float, float]:
+    """
+    Get a color field from a rhino3dm.RenderMaterial
+    """
+    colstr = rm.GetParameter(field_name)
+    if not colstr:
+        print(f"No color field found {field_name}")
+        return _white
+    print(f"---->> {colstr}")
+    coltup = tuple(float(f) for f in colstr.split(","))  # convert to tuple of floats
+    return coltup
+
+def get_float_field(rm : r3d.RenderMaterial, field_name : str) -> float:
+    """
+    Get a float field from a rhino3dm.RenderMaterial
+    """
+    fl = rm.GetParameter(field_name)
+    if not fl:
+        print(f"No float field found {field_name}")
+        return 0.0
+    return float(fl)
+
+def hash_rendermaterial(M : r3d.RenderMaterial):
+    """
+    Hash a rhino3dm.Material. A CRC32 is calculated using the
+    material name and data that affects render results
+    """
+    crc = 13
+    crc = binascii.crc32(bytes(M.Name, "utf-8"))
+    crc = binascii.crc32(bytes(M.GetParameter("pbr-base-color"), "utf-8"), crc)
+    crc = binascii.crc32(bytes(M.GetParameter("pbr-emission"), "utf-8"), crc)
+    crc = binascii.crc32(bytes(M.GetParameter("pbr-subsurface_scattering-color"), "utf-8"), crc)
+    crc = binascii.crc32(tobytes(get_float_field(M, "pbr-opacity")), crc)
+    crc = binascii.crc32(tobytes(get_float_field(M, "pbr-opacity-ior")), crc)
+    crc = binascii.crc32(tobytes(get_float_field(M, "pbr-opacity-roughness")), crc)
+    crc = binascii.crc32(tobytes(get_float_field(M, "pbr-roughness")), crc)
+    crc = binascii.crc32(tobytes(get_float_field(M, "pbr-metallic")), crc)
+    return crc
+
+
 
 def material_name(m):
     h = hash_material(m)
-    return m.Name + "~" + str(h)
+    return m.Name # + "~" + str(h)
+
+def rendermaterial_name(m):
+    h = hash_rendermaterial(m)
+    return m.Name  #+ "~" + str(h)
+
+def harvest_from_rendercontent(model : r3d.File3dm, mat : r3d.RenderMaterial):
+    m = model.RenderContent.FindId(mat.RenderMaterialInstanceId)
 
 
-def handle_materials(context, model, materials, update):
+def handle_materials(context, model : r3d.File3dm, materials, update):
     """
     """
-    for m in model.Materials:
-        matname = material_name(m)
+    rdk = rdk_manager.RdkManager(model)
+    #rms = rdk.get_materials()
+    #for m in rms:
+    for mat in model.Materials:
+        if not mat.IsPhysicallyBased:
+            mat.ToPhysicallyBased()
+        m = model.RenderContent.FindId(mat.RenderMaterialInstanceId)
+        matname = rendermaterial_name(m)
         if matname not in materials:
-            blmat = utils.get_iddata(context.blend_data.materials, None, m.Name, None)
+            tags = utils.create_tag_dict(m.Id, m.Name)
+            blmat = utils.get_or_create_iddata(context.blend_data.materials, tags, None)
             if update:
                 blmat.use_nodes = True
-                refl = m.Reflectivity
-                transp = m.Transparency
-                ior = m.IndexOfRefraction
-                roughness = m.ReflectionGlossiness
-                transrough = m.RefractionGlossiness
-                spec = m.Shine / 255.0
-                
-                if m.DiffuseColor == _black and m.Reflectivity > 0.0 and m.Transparency == 0.0:
-                    r, g, b, _ = m.ReflectionColor
-                elif m.DiffuseColor == _black and m.Reflectivity == 0.0 and m.Transparency > 0.0:
-                    r, g, b, _ = m.TransparentColor
-                    refl = 0.0
-                elif m.DiffuseColor == _black and m.Reflectivity > 0.0 and m.Transparency > 0.0:
-                    r, g, b, _ = m.TransparentColor
-                    refl = 0.0
-                else:
-                    r, g, b, a = m.DiffuseColor
-                    if refl > 0.0 and transp > 0.0:
-                        refl = 0.0
+                refl = get_float_field(m, "pbr-metallic")
+                transp = get_float_field(m, "pbr-opacity")
+                ior = get_float_field(m, "pbr-opacity-ior")
+                roughness = get_float_field(m, "pbr-roughness")
+                transrough = get_float_field(m, "pbr-opacity-roughness")
+                spec = get_float_field(m, "pbr-specular")
+                basecol = get_color_field(m, "pbr-base-color")
+
                 principled = PrincipledBSDFWrapper(blmat, is_readonly=False)
-                principled.base_color = (r/255.0, g/255.0, b/255.0)
+                principled.base_color = basecol[0:3]
                 principled.metallic = refl
                 principled.transmission = transp
                 principled.ior = ior
                 principled.roughness = roughness
                 principled.specular = spec
-                principled.node_principled_bsdf.inputs[16].default_value = transrough
+                if bpy.app.version[0] < 4:
+                    principled.node_principled_bsdf.inputs[16].default_value = transrough
             materials[matname] = blmat

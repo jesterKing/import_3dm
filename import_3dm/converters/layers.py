@@ -1,6 +1,6 @@
 # MIT License
 
-# Copyright (c) 2018-2019 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig 
+# Copyright (c) 2018-2024 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,8 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
-import rhino3dm as r3d
 from . import utils
 
 
@@ -50,20 +48,11 @@ def handle_layers(context, model, toplayer, layerids, materials, update, import_
     for lid, l in enumerate(model.Layers):
         if not l.Visible and not import_hidden:
             continue
-        lcol = utils.get_iddata(context.blend_data.collections, l.Id, l.Name, None)
+        tags = utils.create_tag_dict(l.Id, l.Name)
+        lcol = utils.get_or_create_iddata(context.blend_data.collections, tags, None)
         layerids[str(l.Id)] = (lid, lcol)
-        utils.tag_data(layerids[str(l.Id)][1], l.Id, l.Name)
-        '''
-        matname = l.Name + "+" + str(l.Id)
-        if matname not in materials:
-            laymat = utils.get_iddata(context.blend_data.materials, l.Id, l.Name, None)
-            if update:
-	            laymat.use_nodes = True
-	            r, g, b, _ = l.Color
-	            principled = PrincipledBSDFWrapper(laymat, is_readonly=False)
-	            principled.base_color = (r/255.0, g/255.0, b/255.0)
-            materials[matname] = laymat
-        '''
+        #utils.tag_data(layerids[str(l.Id)][1], l.Id, l.Name)
+
     # second pass so we can link layers to each other
     for l in model.Layers:
         # link up layers to their parent layers

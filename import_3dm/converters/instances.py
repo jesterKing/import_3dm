@@ -1,6 +1,6 @@
 # MIT License
 
-# Copyright (c) 2018-2020 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig
+# Copyright (c) 2018-2024 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -46,19 +46,38 @@ def handle_instance_definitions(context, model, toplayer, layername):
             toplayer.children.link(instance_col)
 
     for idef in model.InstanceDefinitions:
-        idef_col=utils.get_iddata(context.blend_data.collections,idef.Id, idef.Name, None )
+        tags = utils.create_tag_dict(idef.Id, idef.Name, None, None, True)
+        idef_col=utils.get_or_create_iddata(context.blend_data.collections, tags, None )
 
         try:
             instance_col.children.link(idef_col)
         except Exception:
             pass
 
-def import_instance_reference(context, ob, iref, name, scale, options):
-    #TODO:  insert reduced mesh proxy and hide actual instance in viewport for better performance on large files
-    iref.empty_display_size=0.5
-    iref.empty_display_type='PLAIN_AXES'
+def _duplicate_collection(context : bpy.context, collection : bpy.types.Collection, newname : str):
+    new_collection = bpy.context.blend_data.collections.new(name=newname)
+    def _recurse_duplicate_collection(collection : bpy.types.Collection):
+        for obj in collection.children:
+            if type(obj.type) == bpy.types.Collection:
+                pass
+            else:
+                new_obj = context.blend_data.objects.new(name=obj.name, object_data=obj.data)
+                new_collection.objects.link(new_obj)
+        for child in collection.children:
+            new_child = bpy.context.blend_data.collections.new(name=child.name)
+            new_collection.children.link(new_child)
+            _recurse_duplicate_collection(child,new_child)
+
+def import_instance_reference(context : bpy.context, ob : r3d.File3dmObject, iref : bpy.types.Object, name : str, scale : float, options):
+    # To be able to support ByParent material we need to add actual objects
+    # instead of collection instances. That will allow us to add material slots
+    # to instances and set them to 'OBJECT', which allows us to essentially
+    # 'override' the material for the original mesh data
+    tags = utils.create_tag_dict(ob.Geometry.ParentIdefId, "")
     iref.instance_type='COLLECTION'
-    iref.instance_collection = utils.get_iddata(context.blend_data.collections,ob.Geometry.ParentIdefId,"",None)
+    iref.instance_collection = utils.get_or_create_iddata(context.blend_data.collections, tags, None)
+    #instance_definition = utils.get_or_create_iddata(context.blend_data.collections, tags, None)
+    #iref.data = instance_definition.data
     xform=list(ob.Geometry.Xform.ToFloatArray(1))
     xform=[xform[0:4],xform[4:8], xform[8:12], xform[12:16]]
     xform[0][3]*=scale
@@ -77,7 +96,8 @@ def populate_instance_definitions(context, model, toplayer, layername, options, 
 
     #for every instance definition fish out the instance definition objects and link them to their parent
     for idef in model.InstanceDefinitions:
-        parent=utils.get_iddata(context.blend_data.collections, idef.Id, idef.Name, None)
+        tags = utils.create_tag_dict(idef.Id, idef.Name, None, None, True)
+        parent=utils.get_or_create_iddata(context.blend_data.collections, tags, None)
         objectids=idef.GetObjectIds()
 
         if import_as_grid:
@@ -87,8 +107,8 @@ def populate_instance_definitions(context, model, toplayer, layername, options, 
             count +=1
 
         for ob in context.blend_data.objects:
-            for uuid in objectids:
-                if ob.get('rhid',None) == str(uuid):
+            for guid in objectids:
+                if ob.get('rhid',None) == str(guid):
                     try:
                         parent.objects.link(ob)
                         if import_as_grid:

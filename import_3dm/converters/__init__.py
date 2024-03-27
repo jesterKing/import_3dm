@@ -1,6 +1,6 @@
 # MIT License
 
-# Copyright (c) 2018-2020 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig
+# Copyright (c) 2018-2024 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -21,6 +21,8 @@
 # SOFTWARE.
 
 import rhino3dm as r3d
+import bpy
+from bpy import context
 
 from .material import handle_materials, material_name, DEFAULT_RHINO_MATERIAL
 from .layers import handle_layers
@@ -30,6 +32,8 @@ from .views import handle_views
 from .groups import handle_groups
 from .instances import import_instance_reference, handle_instance_definitions, populate_instance_definitions
 from .pointcloud import import_pointcloud
+
+from . import utils
 
 '''
 Dictionary mapping between the Rhino file types and importer functions
@@ -50,7 +54,15 @@ RHINO_TYPE_TO_IMPORT = {
 # TODO: Decouple object data creation from object creation
 #       and consolidate object-level conversion.
 
-def convert_object(context, ob, name, layer, rhinomat, view_color, scale, options):
+def convert_object(
+        context     : bpy.types.Context,
+        ob          : r3d.File3dmObject,
+        name        : str,
+        layer,
+        rhinomat    : bpy.types.Material,
+        view_color,
+        scale       : float,
+        options):
     """
     Add a new object with given data, link to
     collection given by layer
@@ -62,12 +74,13 @@ def convert_object(context, ob, name, layer, rhinomat, view_color, scale, option
     if ob.Geometry.ObjectType in RHINO_TYPE_TO_IMPORT:
         data = RHINO_TYPE_TO_IMPORT[ob.Geometry.ObjectType](context, ob, name, scale, options)
 
+    tags = utils.create_tag_dict(ob.Attributes.Id, ob.Attributes.Name)
     if data:
         data.materials.append(rhinomat)
-        blender_object = utils.get_iddata(context.blend_data.objects, ob.Attributes.Id, ob.Attributes.Name, data)
+        blender_object = utils.get_or_create_iddata(context.blend_data.objects, tags, data)
     else:
         blender_object = context.blend_data.objects.new(name+"_Instance", None)
-        utils.tag_data(blender_object, ob.Attributes.Id, ob.Attributes.Name)
+        utils.tag_data(blender_object, tags)
 
     blender_object.color = [x/255. for x in view_color]
 
@@ -88,6 +101,15 @@ def convert_object(context, ob, name, layer, rhinomat, view_color, scale, option
 
     for pair in ob.Geometry.GetUserStrings():
         blender_object[pair[0]] = pair[1]
+
+    if not ob.Attributes.IsInstanceDefinitionObject and ob.Geometry.ObjectType != r3d.ObjectType.InstanceReference:
+        override_context = context.copy()
+        override_context["object"] = blender_object
+        with context.temp_override(**override_context):
+            bpy.ops.object.material_slot_add()
+
+        blender_object.material_slots[0].link = 'OBJECT'
+        blender_object.material_slots[0].material = rhinomat
 
     #instance definition objects are linked within their definition collections
     if not ob.Attributes.IsInstanceDefinitionObject:

@@ -1,6 +1,6 @@
 # MIT License
 
-# Copyright (c) 2018-2020 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig
+# Copyright (c) 2018-2024 Nathan Letwory, Joel Putnam, Tom Svilans, Lukas Fertig
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,8 @@ import os.path
 import bpy
 import sys
 import os
-import site
+from pathlib import Path
+from typing import Any, Dict, Set
 
 
 def modules_path():
@@ -127,28 +128,19 @@ except:
 from . import converters
 
 
-def read_3dm(context, options):
-
-    filepath = options.get("filepath", "")
-    model = None
-
-    try:
-        model = r3d.File3dm.Read(filepath)
-    except:
-        print("Failed to import .3dm model: {}".format(filepath))
-        return {'CANCELLED'}
-
-    top_collection_name = os.path.splitext(os.path.basename(filepath))[0]
+def create_or_get_top_layer(context, filepath):
+    top_collection_name = Path(filepath).stem
     if top_collection_name in context.blend_data.collections.keys():
         toplayer = context.blend_data.collections[top_collection_name]
     else:
         toplayer = context.blend_data.collections.new(name=top_collection_name)
+    return toplayer
 
-    # Get proper scale for conversion
-    scale = r3d.UnitSystem.UnitScale(model.Settings.ModelUnitSystem, r3d.UnitSystem.Meters) / context.scene.unit_settings.scale_length
 
-    layerids = {}
-    materials = {}
+def read_3dm(
+        context : bpy.types.Context,
+        options : Dict[str, Any]
+    )   -> Set[str]:
 
     # Parse options
     import_views = options.get("import_views", False)
@@ -160,6 +152,22 @@ def read_3dm(context, options):
     import_instances = options.get("import_instances",False)
     update_materials = options.get("update_materials", False)
 
+    filepath : str = options.get("filepath", "")
+    model = None
+
+    try:
+        model = r3d.File3dm.Read(filepath)
+    except:
+        print("Failed to import .3dm model: {}".format(filepath))
+        return {'CANCELLED'}
+
+    toplayer = create_or_get_top_layer(context, filepath)
+
+    # Get proper scale for conversion
+    scale = r3d.UnitSystem.UnitScale(model.Settings.ModelUnitSystem, r3d.UnitSystem.Meters) / context.scene.unit_settings.scale_length
+
+    layerids = {}
+    materials = {}
 
     # Import Views and NamedViews
     if import_views:
@@ -179,42 +187,43 @@ def read_3dm(context, options):
         converters.handle_instance_definitions(context, model, toplayer, "Instance Definitions")
 
     # Handle objects
+    ob : r3d.File3dmObject = None
     for ob in model.Objects:
-        og = ob.Geometry
+        og : r3d.GeometryBase = ob.Geometry
 
         # Skip unsupported object types early
         if og.ObjectType not in converters.RHINO_TYPE_TO_IMPORT and og.ObjectType != r3d.ObjectType.InstanceReference:
             print("Unsupported object type: {}".format(og.ObjectType))
             continue
 
-        #convert_rhino_object = converters.RHINO_TYPE_TO_IMPORT[og.ObjectType]
-
-        # Check object and layer visibility
+        # Check object visibility
         attr = ob.Attributes
         if not attr.Visible and not import_hidden_objects:
             continue
 
+        # Check object layer visibility
         rhinolayer = model.Layers.FindIndex(attr.LayerIndex)
-
         if not rhinolayer.Visible and not import_hidden_layers:
             continue
 
-        # Create object name
+        # Create object name if none exists or it is an empty string.
+        # Otherwise use the name from the 3dm file.
         if attr.Name == "" or attr.Name is None:
             n = str(og.ObjectType).split(".")[1]+" " + str(attr.Id)
         else:
             n = attr.Name
 
-        # Get render material
-        mat_index = ob.Attributes.MaterialIndex
-
-        if ob.Attributes.MaterialSource == r3d.ObjectMaterialSource.MaterialFromLayer:
+        # Get render material, either from object. or if MaterialSource
+        # is set to MaterialFromLayer, from the layer.
+        mat_index = attr.MaterialIndex
+        if attr.MaterialSource == r3d.ObjectMaterialSource.MaterialFromLayer:
             mat_index = rhinolayer.RenderMaterialIndex
-
         rhino_material = model.Materials.FindIndex(mat_index)
 
-        # Handle default material and fetch associated Blender material
-        if rhino_material.Name == "":
+        # Get material name. In case of the Rhino default material use
+        # DEFAULT_RHINO_MATERIAL, otherwise compute a name from the material
+        # so that it is fit for Blender usage.
+        if mat_index == -1 or rhino_material.Name == "":
             matname = converters.material.DEFAULT_RHINO_MATERIAL
         else:
             matname = converters.material_name(rhino_material)
@@ -225,19 +234,18 @@ def read_3dm(context, options):
         else:
             view_color = ob.Attributes.ObjectColor
 
-        rhinomat = materials[matname]
+        # Get the corresponding Blender material based on the material name
+        # from the material dictionary
+        blender_material = materials[matname]
 
         # Fetch layer
         layer = layerids[str(rhinolayer.Id)][1]
-
 
         if og.ObjectType==r3d.ObjectType.InstanceReference and import_instances:
             n = model.InstanceDefinitions.FindId(og.ParentIdefId).Name
 
         # Convert object
-        converters.convert_object(context, ob, n, layer, rhinomat, view_color, scale, options)
-
-        #convert_rhino_object(og, context, n, attr.Name, attr.Id, layer, rhinomat, scale)
+        converters.convert_object(context, ob, n, layer, blender_material, view_color, scale, options)
 
         if import_groups:
             converters.handle_groups(context,attr,toplayer,import_nested_groups)
