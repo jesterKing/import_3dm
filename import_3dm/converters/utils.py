@@ -46,13 +46,15 @@ def tag_data(
     idblock['rhmatid'] = str(matid)
     idblock['rhparentid'] = str(parentid)
     idblock['rhidef'] = is_idef
+    idblock['rhmat_from_object'] = tag_dict.get('rhmat_from_object', True)
 
 def create_tag_dict(
-        guid    : uuid.UUID,
-        name    : str,
-        matid   : uuid.UUID = None,
-        parentid: uuid.UUID = None,
-        is_idef : bool = False
+        guid            : uuid.UUID,
+        name            : str,
+        matid           : uuid.UUID = None,
+        parentid        : uuid.UUID = None,
+        is_idef         : bool = False,
+        mat_from_object : bool = True,
 ) -> Dict[str, Any]:
     """
     Create a dictionary with the tag data. This can be used
@@ -65,7 +67,8 @@ def create_tag_dict(
         'rhname': name,
         'rhmatid': matid,
         'rhparentid': parentid,
-        'rhidef': is_idef
+        'rhidef': is_idef,
+        'rhmat_from_object': mat_from_object
     }
 
 

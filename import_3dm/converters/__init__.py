@@ -24,6 +24,8 @@ import rhino3dm as r3d
 import bpy
 from bpy import context
 
+from typing import Any, Dict
+
 from .material import handle_materials, material_name, DEFAULT_RHINO_MATERIAL
 from .layers import handle_layers
 from .render_mesh import import_render_mesh
@@ -58,11 +60,11 @@ def convert_object(
         context     : bpy.types.Context,
         ob          : r3d.File3dmObject,
         name        : str,
-        layer,
+        layer       : bpy.types.Collection,
         rhinomat    : bpy.types.Material,
         view_color,
         scale       : float,
-        options):
+        options     : Dict[str, Any]):
     """
     Add a new object with given data, link to
     collection given by layer
@@ -73,6 +75,8 @@ def convert_object(
 
     if ob.Geometry.ObjectType in RHINO_TYPE_TO_IMPORT:
         data = RHINO_TYPE_TO_IMPORT[ob.Geometry.ObjectType](context, ob, name, scale, options)
+
+    mat_from_object = ob.Attributes.MaterialSource == r3d.ObjectMaterialSource.MaterialFromObject
 
     tags = utils.create_tag_dict(ob.Attributes.Id, ob.Attributes.Name)
     if data:

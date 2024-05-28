@@ -22,8 +22,7 @@
 
 import bpy
 import rhino3dm as r3d
-from mathutils import Matrix
-from mathutils import Vector
+from mathutils import Matrix, Vector
 from math import sqrt
 from . import utils
 
@@ -36,8 +35,15 @@ from . import utils
 
 def handle_instance_definitions(context, model, toplayer, layername):
     """
-    import instance definitions from rhino model as empty collections
+    Import instance definitions from rhino model as empty collections. These
+    will later be populated to contain actual geometry.
     """
+
+    # TODO: here we need to get instance name and material used by this instance
+    # meaning we need to also extrapolate either layer material or by parent
+    # material.
+
+    #
 
     if not layername in context.blend_data.collections:
             instance_col = context.blend_data.collections.new(name=layername)

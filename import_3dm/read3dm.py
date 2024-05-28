@@ -209,9 +209,9 @@ def read_3dm(
         # Create object name if none exists or it is an empty string.
         # Otherwise use the name from the 3dm file.
         if attr.Name == "" or attr.Name is None:
-            n = str(og.ObjectType).split(".")[1]+" " + str(attr.Id)
+            object_name = str(og.ObjectType).split(".")[1]+" " + str(attr.Id)
         else:
-            n = attr.Name
+            object_name = attr.Name
 
         # Get render material, either from object. or if MaterialSource
         # is set to MaterialFromLayer, from the layer.
@@ -242,10 +242,10 @@ def read_3dm(
         layer = layerids[str(rhinolayer.Id)][1]
 
         if og.ObjectType==r3d.ObjectType.InstanceReference and import_instances:
-            n = model.InstanceDefinitions.FindId(og.ParentIdefId).Name
+            object_name = model.InstanceDefinitions.FindId(og.ParentIdefId).Name
 
         # Convert object
-        converters.convert_object(context, ob, n, layer, blender_material, view_color, scale, options)
+        converters.convert_object(context, ob, object_name, layer, blender_material, view_color, scale, options)
 
         if import_groups:
             converters.handle_groups(context,attr,toplayer,import_nested_groups)
