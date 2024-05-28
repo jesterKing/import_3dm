@@ -24,11 +24,12 @@ import binascii
 import struct
 import bpy
 import rhino3dm as r3d
-from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
+from bpy_extras.node_shader_utils import ShaderWrapper, PrincipledBSDFWrapper
+from bpy_extras.node_shader_utils import rgba_to_rgb, rgb_to_rgba
 from . import utils
 from . import rdk_manager
 
-from typing import Tuple
+from typing import Any, Tuple
 
 ### default Rhino material name
 DEFAULT_RHINO_MATERIAL = "Rhino Default Material"
@@ -119,7 +120,7 @@ def get_float_field(rm : r3d.RenderMaterial, field_name : str) -> float:
     """
     fl = rm.GetParameter(field_name)
     if not fl:
-        print(f"No float field found {field_name}")
+        #print(f"No float field found {field_name}")
         return 0.0
     return float(fl)
 
@@ -138,6 +139,7 @@ def hash_rendermaterial(M : r3d.RenderMaterial):
     crc = binascii.crc32(tobytes(get_float_field(M, "pbr-opacity-roughness")), crc)
     crc = binascii.crc32(tobytes(get_float_field(M, "pbr-roughness")), crc)
     crc = binascii.crc32(tobytes(get_float_field(M, "pbr-metallic")), crc)
+    print(f"Hashed {M.Name} ({M.TypeName}) --> {crc}")
     return crc
 
 
@@ -150,25 +152,182 @@ def rendermaterial_name(m):
     h = hash_rendermaterial(m)
     return m.Name  #+ "~" + str(h)
 
-def harvest_from_rendercontent(model : r3d.File3dm, mat : r3d.RenderMaterial):
-    m = model.RenderContent.FindId(mat.RenderMaterialInstanceId)
+
+class PlasterWrapper(ShaderWrapper):
+    NODES_LIST = (
+        "node_out",
+        "node_diffuse_bsdf",
+
+        "_node_texcoords",
+    )
+
+    __slots__ = (
+        "material",
+        *NODES_LIST
+    )
+
+    NODES_LIST = ShaderWrapper.NODES_LIST + NODES_LIST
+
+    def __init__(self, material):
+        super(PlasterWrapper, self).__init__(material, is_readonly=False, use_nodes=True)
+
+    def update(self):
+        super(PlasterWrapper, self).update()
+
+        tree = self.material.node_tree
+        nodes = tree.nodes
+        links = tree.links
+
+        node_out = None
+        node_diffuse_bsdf = None
+        for n in nodes:
+            if n.bl_idname == 'ShaderNodeOutputMaterial' and n.inputs[0].is_linked:
+                node_out = n
+                node_diffuse_bsdf = n.inputs[0].links[0].from_node
+            elif n.bl_idname == 'ShaderNodeBsdfDiffuse' and n.outputs[0].is_linked:
+                node_diffuse_bsdf = n
+                for lnk in n.outputs[0].links:
+                    node_out = lnk.to_node
+                    if node_out.bl_idname == 'ShaderNodeOutputMaterial':
+                        break
+            if (
+                node_out is not None and node_diffuse_bsdf is not None and
+                node_out.bl_idname == 'ShaderNodeOutputMaterial' and
+                node_diffuse_bsdf.bl_idname == 'ShaderNodeBsdfDiffuse'
+            ):
+                break
+            node_out = node_diffuse_bsdf = None
+
+        if node_out is not None:
+            self._grid_to_location(0, 0, ref_node=node_out)
+        else:
+            node_out = nodes.new('ShaderNodeOutputMaterial')
+            node_out.label = "Material Out"
+            node_out.target = 'ALL'
+            self._grid_to_location(1, 1, ref_node=node_out)
+        self.node_out = node_out
+
+        if node_diffuse_bsdf is not None:
+            self._grid_to_location(0, 0, ref_node=node_diffuse_bsdf)
+        else:
+            node_diffuse_bsdf = nodes.new('ShaderNodeBsdfDiffuse')
+            node_diffuse_bsdf.label = "Diffuse BSDF"
+            self._grid_to_location(0, 1, ref_node=node_diffuse_bsdf)
+            links.new(node_diffuse_bsdf.outputs["BSDF"], self.node_out.inputs["Surface"])
+        self.node_diffuse_bsdf = node_diffuse_bsdf
+
+    def base_color_get(self):
+        if self.node_diffuse_bsdf is None:
+            return self.material.diffuse_color
+        return self.node_diffuse_bsdf.inputs["Color"].default_value
+
+    def base_color_set(self, color):
+        #color = rgb_to_rgba(color)
+        self.material.diffuse_color = color
+        if self.node_diffuse_bsdf is not None:
+            self.node_diffuse_bsdf.inputs["Color"].default_value = color
+
+    base_color = property(base_color_get, base_color_set)
+
+
+def paint_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.types.Material):
+    paint = PrincipledBSDFWrapper(blender_material, is_readonly = False)
+    col = get_color_field(rhino_material, "color")[0:3]
+    roughness = 1.0 - get_float_field(rhino_material, "reflectivity")
+    paint.base_color = col
+    paint.specular = 0.5
+    paint.roughness = roughness
+
+def plaster_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.types.Material):
+    plaster = PlasterWrapper(blender_material)
+    col = get_color_field(rhino_material, "color")
+    plaster.base_color = col
+
+def metal_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.types.Material):
+    metal = PrincipledBSDFWrapper(blender_material, is_readonly=False)
+    col = get_color_field(rhino_material, "color")[0:3]
+    roughness = get_float_field(rhino_material, "polish-amount")
+    metal.base_color = col
+    metal.metallic = 1.0
+    metal.roughness = roughness
+
+def glass_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.types.Material):
+    glass = PrincipledBSDFWrapper(blender_material, is_readonly=False)
+    col = get_color_field(rhino_material, "color")[0:3]
+    roughness = 1.0 - get_float_field(rhino_material, "clarity-amount")
+    ior = get_float_field(rhino_material, "ior")
+    glass.base_color = col
+    glass.transmission = 1.0
+    glass.roughness = roughness
+    glass.metallic = 0.0
+    glass.ior= ior
+
+def pbr_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.types.Material):
+    pbr = PrincipledBSDFWrapper(blender_material, is_readonly=False)
+
+    refl = get_float_field(rhino_material, "pbr-metallic")
+    transp = get_float_field(rhino_material, "pbr-opacity")
+    ior = get_float_field(rhino_material, "pbr-opacity-ior")
+    roughness = get_float_field(rhino_material, "pbr-roughness")
+    transrough = get_float_field(rhino_material, "pbr-opacity-roughness")
+    spec = get_float_field(rhino_material, "pbr-specular")
+    basecol = get_color_field(rhino_material, "pbr-base-color")
+
+    pbr.base_color = basecol[0:3]
+    pbr.metallic = refl
+    pbr.transmission = transp
+    pbr.ior = ior
+    pbr.roughness = roughness
+    pbr.specular = spec
+    if bpy.app.version[0] < 4:
+        pbr.node_principled_bsdf.inputs[16].default_value = transrough
+
+
+def not_yet_implemented(rhino_material : r3d.RenderMaterial, blender_material : bpy.types.Material):
+    paint = PlasterWrapper(blender_material)
+    paint.base_color = (1.0, 0.0, 1.0, 1.0)
+
+material_handlers = {
+    'rdk-paint-material': paint_material,
+    'rdk-metal-material': metal_material,
+    'rdk-plaster-material': plaster_material,
+    'rdk-glass-material': glass_material,
+    '5a8d7b9b-cdc9-49de-8c16-2ef64fb097ab': pbr_material,
+}
+
+def harvest_from_rendercontent(model : r3d.File3dm, mat : r3d.RenderMaterial, blender_material : bpy.types.Material):
+    blender_material.use_nodes = True
+    typeName = mat.TypeName
+
+    material_handler = material_handlers.get(typeName, not_yet_implemented)
+    material_handler(mat, blender_material)
+
+
+
+
 
 
 def handle_materials(context, model : r3d.File3dm, materials, update):
     """
     """
     rdk = rdk_manager.RdkManager(model)
-    #rms = rdk.get_materials()
+    rms = rdk.get_materials()
     #for m in rms:
     for mat in model.Materials:
-        if not mat.IsPhysicallyBased:
+        if not mat.PhysicallyBased:
             mat.ToPhysicallyBased()
         m = model.RenderContent.FindId(mat.RenderMaterialInstanceId)
+
+        if not m:
+            continue
+
         matname = rendermaterial_name(m)
         if matname not in materials:
             tags = utils.create_tag_dict(m.Id, m.Name)
             blmat = utils.get_or_create_iddata(context.blend_data.materials, tags, None)
             if update:
+                harvest_from_rendercontent(model, m, blmat)
+                """
                 blmat.use_nodes = True
                 refl = get_float_field(m, "pbr-metallic")
                 transp = get_float_field(m, "pbr-opacity")
@@ -187,4 +346,5 @@ def handle_materials(context, model : r3d.File3dm, materials, update):
                 principled.specular = spec
                 if bpy.app.version[0] < 4:
                     principled.node_principled_bsdf.inputs[16].default_value = transrough
+                """
             materials[matname] = blmat

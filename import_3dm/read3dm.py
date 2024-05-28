@@ -163,6 +163,8 @@ def read_3dm(
 
         # Get the corresponding Blender material based on the material name
         # from the material dictionary
+        if matname not in materials.keys():
+            matname = converters.material.DEFAULT_RHINO_MATERIAL
         blender_material = materials[matname]
 
         # Fetch layer
