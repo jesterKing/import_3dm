@@ -250,6 +250,7 @@ def metal_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.t
     metal.base_color = col
     metal.metallic = 1.0
     metal.roughness = roughness
+    metal.transmission = 0.0
 
 def glass_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.types.Material):
     glass = PrincipledBSDFWrapper(blender_material, is_readonly=False)
@@ -266,12 +267,14 @@ def pbr_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.typ
     pbr = PrincipledBSDFWrapper(blender_material, is_readonly=False)
 
     refl = get_float_field(rhino_material, "pbr-metallic")
-    transp = get_float_field(rhino_material, "pbr-opacity")
+    transp = 1.0 - get_float_field(rhino_material, "pbr-opacity")
     ior = get_float_field(rhino_material, "pbr-opacity-ior")
     roughness = get_float_field(rhino_material, "pbr-roughness")
     transrough = get_float_field(rhino_material, "pbr-opacity-roughness")
     spec = get_float_field(rhino_material, "pbr-specular")
     basecol = get_color_field(rhino_material, "pbr-base-color")
+    emission_color = get_color_field(rhino_material, "pbr-emission")
+    emission_amount = get_float_field(rhino_material, "pbr-emission-double-amount")
 
     pbr.base_color = basecol[0:3]
     pbr.metallic = refl
@@ -279,6 +282,8 @@ def pbr_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.typ
     pbr.ior = ior
     pbr.roughness = roughness
     pbr.specular = spec
+    pbr.emission_color = emission_color[0:3]
+    pbr.emission_strength = emission_amount
     if bpy.app.version[0] < 4:
         pbr.node_principled_bsdf.inputs[16].default_value = transrough
 
