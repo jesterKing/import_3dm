@@ -264,6 +264,41 @@ def glass_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.t
     glass.metallic = 0.0
     glass.ior= ior
 
+
+def _get_blender_pbr_texture(pbr : PrincipledBSDFWrapper, field_name : str):
+    if field_name == "pbr-base-color":
+        return pbr.base_color_texture
+    elif field_name == "pbr-metallic":
+        return pbr.metallic_texture
+    else:
+        raise ValueError(f"Unknown field name {field_name}")
+
+def handle_pbr_texture(rhino_material : r3d.RenderMaterial, pbr : PrincipledBSDFWrapper, field_name : str):
+    rhino_tex = rhino_material.FindChild(field_name)
+    if rhino_tex:
+        fp = Path(rhino_tex.FileName)
+        if not fp.exists():
+            print(f"File {fp} does not exist, see if we can find it in the embedded files")
+            fp = [efp for efp in _efps if efp.name == fp.name]
+            if len(fp):
+                fp = fp[0]
+            else:
+                return
+
+        # ensure the image is loaded in Blender if it hasn't been already
+        if  fp.exists() and not bpy.context.blend_data.images.get(fp.name, None):
+            pbr_tex = _get_blender_pbr_texture(pbr, field_name)
+            bpy.ops.image.open(filepath=f"{fp}")
+
+        # we now should have the image in Blender, but just making sure it really
+        # really is there check for it first, than assign
+        if bpy.context.blend_data.images.get(fp.name, None):
+            pbr_tex = _get_blender_pbr_texture(pbr, field_name)
+            img = bpy.context.blend_data.images[fp.name]
+            pbr_tex.node_image.image = img
+        else:
+            print(f"Image {fp.name} not found in Blender ({fp})")
+
 def pbr_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.types.Material):
     pbr = PrincipledBSDFWrapper(blender_material, is_readonly=False)
 
@@ -288,26 +323,7 @@ def pbr_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.typ
     if bpy.app.version[0] < 4:
         pbr.node_principled_bsdf.inputs[16].default_value = transrough
 
-    basecol_tex = rhino_material.FindChild("pbr-base-color")
-    if basecol_tex:
-        fp = Path(basecol_tex.FileName)
-        if not fp.exists():
-            print(f"File {fp} does not exist")
-            fp = [efp for efp in _efps if efp.name == fp.name]
-            if len(fp):
-                fp = fp[0]
-            else:
-                return
-
-
-        if not bpy.context.blend_data.images.get(fp.name, None) and fp.exists():
-            pbr_basecol_tex = pbr.base_color_texture
-            print(pbr_basecol_tex)
-            bpy.ops.image.open(filepath=f"{fp}")
-        if bpy.context.blend_data.images.get(fp.name, None):
-            pbr_basecol_tex = pbr.base_color_texture
-            img = bpy.context.blend_data.images[fp.name]
-            pbr_basecol_tex.node_image.image = img
+    handle_pbr_texture(rhino_material, pbr, "pbr-base-color")
 
 
 def not_yet_implemented(rhino_material : r3d.RenderMaterial, blender_material : bpy.types.Material):
@@ -359,24 +375,4 @@ def handle_materials(context, model : r3d.File3dm, materials, update):
             blmat = utils.get_or_create_iddata(context.blend_data.materials, tags, None)
             if update:
                 harvest_from_rendercontent(model, m, blmat)
-                """
-                blmat.use_nodes = True
-                refl = get_float_field(m, "pbr-metallic")
-                transp = get_float_field(m, "pbr-opacity")
-                ior = get_float_field(m, "pbr-opacity-ior")
-                roughness = get_float_field(m, "pbr-roughness")
-                transrough = get_float_field(m, "pbr-opacity-roughness")
-                spec = get_float_field(m, "pbr-specular")
-                basecol = get_color_field(m, "pbr-base-color")
-
-                principled = PrincipledBSDFWrapper(blmat, is_readonly=False)
-                principled.base_color = basecol[0:3]
-                principled.metallic = refl
-                principled.transmission = transp
-                principled.ior = ior
-                principled.roughness = roughness
-                principled.specular = spec
-                if bpy.app.version[0] < 4:
-                    principled.node_principled_bsdf.inputs[16].default_value = transrough
-                """
             materials[matname] = blmat
