@@ -28,6 +28,7 @@ from bpy_extras.node_shader_utils import ShaderWrapper, PrincipledBSDFWrapper
 from bpy_extras.node_shader_utils import rgba_to_rgb, rgb_to_rgba
 from . import utils
 from . import rdk_manager
+from pathlib import Path
 
 from typing import Any, Tuple
 
@@ -287,6 +288,27 @@ def pbr_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.typ
     if bpy.app.version[0] < 4:
         pbr.node_principled_bsdf.inputs[16].default_value = transrough
 
+    basecol_tex = rhino_material.FindChild("pbr-base-color")
+    if basecol_tex:
+        fp = Path(basecol_tex.FileName)
+        if not fp.exists():
+            print(f"File {fp} does not exist")
+            fp = [efp for efp in _efps if efp.name == fp.name]
+            if len(fp):
+                fp = fp[0]
+            else:
+                return
+
+
+        if not bpy.context.blend_data.images.get(fp.name, None) and fp.exists():
+            pbr_basecol_tex = pbr.base_color_texture
+            print(pbr_basecol_tex)
+            bpy.ops.image.open(filepath=f"{fp}")
+        if bpy.context.blend_data.images.get(fp.name, None):
+            pbr_basecol_tex = pbr.base_color_texture
+            img = bpy.context.blend_data.images[fp.name]
+            pbr_basecol_tex.node_image.image = img
+
 
 def not_yet_implemented(rhino_material : r3d.RenderMaterial, blender_material : bpy.types.Material):
     paint = PlasterWrapper(blender_material)
@@ -310,11 +332,16 @@ def harvest_from_rendercontent(model : r3d.File3dm, mat : r3d.RenderMaterial, bl
 
 
 
+_model = None
+_efps = None
 
 
 def handle_materials(context, model : r3d.File3dm, materials, update):
     """
     """
+    global _model, _efps
+    _model = model
+    _efps = [Path(fp) for fp in _model.EmbeddedFilePaths()]
     rdk = rdk_manager.RdkManager(model)
     rms = rdk.get_materials()
     #for m in rms:
