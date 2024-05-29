@@ -268,8 +268,20 @@ def glass_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.t
 def _get_blender_pbr_texture(pbr : PrincipledBSDFWrapper, field_name : str):
     if field_name == "pbr-base-color":
         return pbr.base_color_texture
+    elif field_name == "pbr-roughness":
+        return pbr.roughness_texture
     elif field_name == "pbr-metallic":
         return pbr.metallic_texture
+    elif field_name == "pbr-specular":
+        return pbr.specular_texture
+    elif field_name == "pbr-opacity":
+        return pbr.transmission_texture
+    elif field_name == "pbr-alpha":
+        return pbr.alpha_texture
+    elif field_name == "pbr-emission":
+        return pbr.emission_color_texture
+    elif field_name == "pbr-emission-double-amount":
+        return pbr.emission_strength_texture
     else:
         raise ValueError(f"Unknown field name {field_name}")
 
@@ -308,9 +320,10 @@ def pbr_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.typ
     roughness = get_float_field(rhino_material, "pbr-roughness")
     transrough = get_float_field(rhino_material, "pbr-opacity-roughness")
     spec = get_float_field(rhino_material, "pbr-specular")
+    alpha = get_float_field(rhino_material, "pbr-alpha")
     basecol = get_color_field(rhino_material, "pbr-base-color")
     emission_color = get_color_field(rhino_material, "pbr-emission")
-    emission_amount = get_float_field(rhino_material, "pbr-emission-double-amount")
+    emission_amount = get_float_field(rhino_material, "pbr-emission-multiplier")
 
     pbr.base_color = basecol[0:3]
     pbr.metallic = refl
@@ -320,10 +333,18 @@ def pbr_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.typ
     pbr.specular = spec
     pbr.emission_color = emission_color[0:3]
     pbr.emission_strength = emission_amount
+    pbr.alpha = alpha
     if bpy.app.version[0] < 4:
         pbr.node_principled_bsdf.inputs[16].default_value = transrough
 
     handle_pbr_texture(rhino_material, pbr, "pbr-base-color")
+    handle_pbr_texture(rhino_material, pbr, "pbr-metallic")
+    handle_pbr_texture(rhino_material, pbr, "pbr-roughness")
+    handle_pbr_texture(rhino_material, pbr, "pbr-specular")
+    handle_pbr_texture(rhino_material, pbr, "pbr-opacity")
+    handle_pbr_texture(rhino_material, pbr, "pbr-alpha")
+    handle_pbr_texture(rhino_material, pbr, "pbr-emission")
+    handle_pbr_texture(rhino_material, pbr, "pbr-emission-multiplier")
 
 
 def not_yet_implemented(rhino_material : r3d.RenderMaterial, blender_material : bpy.types.Material):
