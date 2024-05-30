@@ -339,7 +339,7 @@ def pbr_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.typ
     alpha = get_float_field(rhino_material, "pbr-alpha")
     basecol = get_color_field(rhino_material, "pbr-base-color")
     emission_color = get_color_field(rhino_material, "pbr-emission")
-    emission_amount = get_float_field(rhino_material, "pbr-emission-multiplier")
+    emission_amount = get_float_field(rhino_material, "emission-multiplier")
 
     pbr.base_color = basecol[0:3]
     pbr.metallic = refl
@@ -360,7 +360,7 @@ def pbr_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.typ
     handle_pbr_texture(rhino_material, pbr, "pbr-opacity")
     handle_pbr_texture(rhino_material, pbr, "pbr-alpha")
     handle_pbr_texture(rhino_material, pbr, "pbr-emission")
-    handle_pbr_texture(rhino_material, pbr, "pbr-emission-multiplier")
+    handle_pbr_texture(rhino_material, pbr, "emission-multiplier")
 
 def rcm_basic_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.types.Material):
     # first version with just simple pbr node. Can do something more elaborate later
