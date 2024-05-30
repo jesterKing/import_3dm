@@ -305,10 +305,13 @@ def handle_pbr_texture(rhino_material : r3d.RenderMaterial, pbr : PrincipledBSDF
     rhino_tex = rhino_material.FindChild(field_name)
     if rhino_tex:
         fp = _name_from_embedded_filepath(rhino_tex.FileName)
+        use_alpha = get_bool_field(rhino_tex, "use-alpha-channel")
         if fp in _efps.keys():
             pbr_tex = _get_blender_pbr_texture(pbr, field_name)
             img = _efps[fp]
             pbr_tex.node_image.image = img
+            if use_alpha and field_name in ("pbr-base-color", "diffuse"):
+                pbr.material.node_tree.links.new(pbr_tex.node_image.outputs['Alpha'], pbr.node_principled_bsdf.inputs['Alpha'])
         else:
             print(f"Image {fp} not found in Blender")
 
