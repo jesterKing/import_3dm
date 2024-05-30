@@ -111,9 +111,7 @@ def get_color_field(rm : r3d.RenderMaterial, field_name : str) -> Tuple[float, f
     """
     colstr = rm.GetParameter(field_name)
     if not colstr:
-        print(f"No color field found {field_name}")
         return _white
-    print(f"---->> {colstr}")
     coltup = tuple(float(f) for f in colstr.split(","))  # convert to tuple of floats
     return coltup
 
@@ -152,7 +150,6 @@ def hash_rendermaterial(M : r3d.RenderMaterial):
     crc = binascii.crc32(tobytes(get_float_field(M, "pbr-opacity-roughness")), crc)
     crc = binascii.crc32(tobytes(get_float_field(M, "pbr-roughness")), crc)
     crc = binascii.crc32(tobytes(get_float_field(M, "pbr-metallic")), crc)
-    print(f"Hashed {M.Name} ({M.TypeName}) --> {crc}")
     return crc
 
 
@@ -307,25 +304,25 @@ def _get_blender_basic_texture(pbr : PrincipledBSDFWrapper, field_name : str):
 def handle_pbr_texture(rhino_material : r3d.RenderMaterial, pbr : PrincipledBSDFWrapper, field_name : str):
     rhino_tex = rhino_material.FindChild(field_name)
     if rhino_tex:
-        fp = rhino_tex.FileName
+        fp = _name_from_embedded_filepath(rhino_tex.FileName)
         if fp in _efps.keys():
             pbr_tex = _get_blender_pbr_texture(pbr, field_name)
             img = _efps[fp]
             pbr_tex.node_image.image = img
         else:
-            print(f"Image {fp.name} not found in Blender ({fp})")
+            print(f"Image {fp} not found in Blender")
 
 
 def handle_basic_texture(rhino_material : r3d.RenderMaterial, pbr : PrincipledBSDFWrapper, field_name : str):
     rhino_tex = rhino_material.FindChild(field_name)
     if rhino_tex:
-        fp = rhino_tex.FileName
+        fp = _name_from_embedded_filepath(rhino_tex.FileName)
         if fp in _efps.keys():
             pbr_tex = _get_blender_basic_texture(pbr, field_name)
             img = _efps[fp]
             pbr_tex.node_image.image = img
         else:
-            print(f"Image {fp.name} not found in Blender ({fp})")
+            print(f"Image {fp} not found in Blender")
 
 def pbr_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.types.Material):
     pbr = PrincipledBSDFWrapper(blender_material, is_readonly=False)
@@ -418,11 +415,18 @@ def harvest_from_rendercontent(model : r3d.File3dm, mat : r3d.RenderMaterial, bl
 
 
 _model = None
-_efps = dict()
+_efps = None
+
+def _name_from_embedded_filepath(efp : str) -> str:
+    efpath = PureWindowsPath(efp)
+    if not efpath.drive:
+        efpath = PurePosixPath(efp)
+    return efpath.name
 
 def handle_embedded_files(model : r3d.File3dm):
     global _model, _efps
     _model = model
+    _efps = dict()
 
     for rhino_embedded_filename in _model.EmbeddedFilePaths():
 
@@ -432,10 +436,7 @@ def handle_embedded_files(model : r3d.File3dm):
         encoded_img = _model.GetEmbeddedFileAsBase64(rhino_embedded_filename)
         decoded_img = base64.b64decode(encoded_img)
 
-        efpath = PureWindowsPath(rhino_embedded_filename)
-        if not efpath.drive:
-            efpath = PurePosixPath(rhino_embedded_filename)
-        ef_name = efpath.name
+        ef_name = _name_from_embedded_filepath(rhino_embedded_filename)
 
         with tempfile.NamedTemporaryFile(delete=False) as tmpf:
             tmpf.write(decoded_img)
@@ -443,7 +444,7 @@ def handle_embedded_files(model : r3d.File3dm):
         blender_image = bpy.context.blend_data.images.load(tmpf.name, check_existing=True)
         blender_image.name = ef_name
         blender_image.pack()
-        _efps[rhino_embedded_filename] = blender_image
+        _efps[ef_name] = blender_image
 
         tmpfpath = tmpf.name
         try:
