@@ -1,1 +1,1 @@
-rhino3dm>=0.1.4
+rhino3dm>=8.6.0

@@ -7,7 +7,7 @@ This add-on uses the `rhino3dm.py` module
 Requirements
 ============
 
-This add-on works with Blender 2.83 and later.
+This add-on works with Blender 3.3 and later.
 
 Installation
 ============
