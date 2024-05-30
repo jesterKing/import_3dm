@@ -273,6 +273,18 @@ def glass_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.t
     glass.metallic = 0.0
     glass.ior= ior
 
+def plastic_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.types.Material):
+    plastic = PrincipledBSDFWrapper(blender_material, is_readonly=False)
+    col = get_color_field(rhino_material, "color")[0:3]
+    roughness = 1.0 - get_float_field(rhino_material, "polish-amount")
+    #roughness = 1.0 - get_float_field(rhino_material, "reflectivity")
+    transparency = get_float_field(rhino_material, "transparency")
+    plastic.base_color = col
+    plastic.transmission = transparency
+    plastic.roughness = roughness
+    plastic.metallic = 0.0
+    plastic.ior= 1.5
+
 
 def _get_blender_pbr_texture(pbr : PrincipledBSDFWrapper, field_name : str):
     if field_name == "pbr-base-color":
@@ -405,6 +417,7 @@ material_handlers = {
     'rdk-metal-material': metal_material,
     'rdk-plaster-material': plaster_material,
     'rdk-glass-material': glass_material,
+    'rdk-plastic-material': plastic_material,
     'rcm-basic-material': rcm_basic_material,
     '5a8d7b9b-cdc9-49de-8c16-2ef64fb097ab': pbr_material,
 }
