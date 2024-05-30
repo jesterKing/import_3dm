@@ -107,10 +107,11 @@ def convert_object(
         blender_object[pair[0]] = pair[1]
 
     if not ob.Attributes.IsInstanceDefinitionObject and ob.Geometry.ObjectType != r3d.ObjectType.InstanceReference:
-        override_context = context.copy()
-        override_context["object"] = blender_object
-        with context.temp_override(**override_context):
-            bpy.ops.object.material_slot_add()
+        if bpy.app.version[0]>= 4:
+            override_context = context.copy()
+            override_context["object"] = blender_object
+            with context.temp_override(**override_context):
+                bpy.ops.object.material_slot_add()
 
         blender_object.material_slots[0].link = 'OBJECT'
         blender_object.material_slots[0].material = rhinomat
