@@ -28,7 +28,9 @@ from bpy_extras.node_shader_utils import ShaderWrapper, PrincipledBSDFWrapper
 from bpy_extras.node_shader_utils import rgba_to_rgb, rgb_to_rgba
 from . import utils
 from . import rdk_manager
-from pathlib import Path
+from pathlib import Path, PureWindowsPath, PurePosixPath
+import base64
+import tempfile
 
 from typing import Any, Tuple
 
@@ -124,6 +126,16 @@ def get_float_field(rm : r3d.RenderMaterial, field_name : str) -> float:
         #print(f"No float field found {field_name}")
         return 0.0
     return float(fl)
+
+def get_bool_field(rm : r3d.RenderMaterial, field_name : str) -> bool:
+    """
+    Get a boolean field from a rhino3dm.RenderMaterial
+    """
+    b = rm.GetParameter(field_name)
+    if not b:
+        #print(f"No bool field found {field_name}")
+        return False
+    return bool(b)
 
 def hash_rendermaterial(M : r3d.RenderMaterial):
     """
@@ -285,28 +297,32 @@ def _get_blender_pbr_texture(pbr : PrincipledBSDFWrapper, field_name : str):
     else:
         raise ValueError(f"Unknown field name {field_name}")
 
+
+def _get_blender_basic_texture(pbr : PrincipledBSDFWrapper, field_name : str):
+    if field_name == "bitmap-texture":
+        return pbr.base_color_texture
+    else:
+        raise ValueError(f"Unknown field name {field_name}")
+
 def handle_pbr_texture(rhino_material : r3d.RenderMaterial, pbr : PrincipledBSDFWrapper, field_name : str):
     rhino_tex = rhino_material.FindChild(field_name)
     if rhino_tex:
-        fp = Path(rhino_tex.FileName)
-        if not fp.exists():
-            print(f"File {fp} does not exist, see if we can find it in the embedded files")
-            fp = [efp for efp in _efps if efp.name == fp.name]
-            if len(fp):
-                fp = fp[0]
-            else:
-                return
-
-        # ensure the image is loaded in Blender if it hasn't been already
-        if  fp.exists() and not bpy.context.blend_data.images.get(fp.name, None):
+        fp = rhino_tex.FileName
+        if fp in _efps.keys():
             pbr_tex = _get_blender_pbr_texture(pbr, field_name)
-            bpy.ops.image.open(filepath=f"{fp}")
+            img = _efps[fp]
+            pbr_tex.node_image.image = img
+        else:
+            print(f"Image {fp.name} not found in Blender ({fp})")
 
-        # we now should have the image in Blender, but just making sure it really
-        # really is there check for it first, than assign
-        if bpy.context.blend_data.images.get(fp.name, None):
-            pbr_tex = _get_blender_pbr_texture(pbr, field_name)
-            img = bpy.context.blend_data.images[fp.name]
+
+def handle_basic_texture(rhino_material : r3d.RenderMaterial, pbr : PrincipledBSDFWrapper, field_name : str):
+    rhino_tex = rhino_material.FindChild(field_name)
+    if rhino_tex:
+        fp = rhino_tex.FileName
+        if fp in _efps.keys():
+            pbr_tex = _get_blender_basic_texture(pbr, field_name)
+            img = _efps[fp]
             pbr_tex.node_image.image = img
         else:
             print(f"Image {fp.name} not found in Blender ({fp})")
@@ -346,6 +362,39 @@ def pbr_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.typ
     handle_pbr_texture(rhino_material, pbr, "pbr-emission")
     handle_pbr_texture(rhino_material, pbr, "pbr-emission-multiplier")
 
+def rcm_basic_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.types.Material):
+    # first version with just simple pbr node. Can do something more elaborate later
+    pbr = PrincipledBSDFWrapper(blender_material, is_readonly=False)
+
+    base_color = get_color_field(rhino_material, "diffuse")
+    trans_color = get_color_field(rhino_material, "transparency-color")
+    trans_color = get_color_field(rhino_material, "reflectivity-color")
+
+    fresnel_enabled = get_bool_field(rhino_material, "fresnel-enabled")
+
+    transparency = get_float_field(rhino_material, "transparency")
+    reflectivity = get_float_field(rhino_material, "reflectivity")
+    ior = get_float_field(rhino_material, "ior")
+    roughness = 1.0 - get_float_field(rhino_material, "polish-amount")
+
+    pbr.specular = 0.5
+
+    if transparency > 0.0:
+        base_color = trans_color
+    else:
+        pbr.base_color = base_color[0:3]
+
+    pbr.roughness = roughness
+
+    if reflectivity > 0.0 and fresnel_enabled:
+        pbr.metallic = reflectivity
+
+    pbr.transmission = transparency
+    pbr.ior = ior
+
+    handle_basic_texture(rhino_material, pbr, "bitmap-texture")
+
+
 
 def not_yet_implemented(rhino_material : r3d.RenderMaterial, blender_material : bpy.types.Material):
     paint = PlasterWrapper(blender_material)
@@ -356,6 +405,7 @@ material_handlers = {
     'rdk-metal-material': metal_material,
     'rdk-plaster-material': plaster_material,
     'rdk-glass-material': glass_material,
+    'rcm-basic-material': rcm_basic_material,
     '5a8d7b9b-cdc9-49de-8c16-2ef64fb097ab': pbr_material,
 }
 
@@ -367,18 +417,46 @@ def harvest_from_rendercontent(model : r3d.File3dm, mat : r3d.RenderMaterial, bl
     material_handler(mat, blender_material)
 
 
-
-
 _model = None
-_efps = None
+_efps = dict()
+
+def handle_embedded_files(model : r3d.File3dm):
+    global _model, _efps
+    _model = model
+
+    for rhino_embedded_filename in _model.EmbeddedFilePaths():
+
+        if rhino_embedded_filename in _efps.keys():
+            continue
+
+        encoded_img = _model.GetEmbeddedFileAsBase64(rhino_embedded_filename)
+        decoded_img = base64.b64decode(encoded_img)
+
+        efpath = PureWindowsPath(rhino_embedded_filename)
+        if not efpath.drive:
+            efpath = PurePosixPath(rhino_embedded_filename)
+        ef_name = efpath.name
+
+        with tempfile.NamedTemporaryFile(delete=False) as tmpf:
+            tmpf.write(decoded_img)
+
+        blender_image = bpy.context.blend_data.images.load(tmpf.name, check_existing=True)
+        blender_image.name = ef_name
+        blender_image.pack()
+        _efps[rhino_embedded_filename] = blender_image
+
+        tmpfpath = tmpf.name
+        try:
+            tmpfpath.unlink()
+        except:
+            pass
+
 
 
 def handle_materials(context, model : r3d.File3dm, materials, update):
     """
     """
-    global _model, _efps
-    _model = model
-    _efps = [Path(fp) for fp in _model.EmbeddedFilePaths()]
+    handle_embedded_files(model)
     rdk = rdk_manager.RdkManager(model)
     rms = rdk.get_materials()
     #for m in rms:
