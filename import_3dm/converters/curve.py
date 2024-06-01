@@ -63,27 +63,48 @@ def import_polyline(rcurve, bcurve, scale):
         rpt = rcurve.Point(i)
         polyline.points[i].co = (rpt.X * scale, rpt.Y * scale, rpt.Z * scale, 1)
 
-    return polyline
 
 CONVERT[r3d.PolylineCurve] = import_polyline
 
 def import_nurbs_curve(rcurve, bcurve, scale):
-
-    N = len(rcurve.Points)
+    # create a list of points where
+    # we ensure we don't have duplicates. Rhino curves
+    # may have duplicate points, which Blender doesn't like
+    seen_pts = set()
+    pts = list()
+    for _p in rcurve.Points:
+        p = (_p.X, _p.Y, _p.Z, _p.W)
+        if not p in seen_pts:
+            pts.append(_p)
+            seen_pts.add(p)
+    N = len(pts)
 
     nurbs = bcurve.splines.new('NURBS')
-    nurbs.use_cyclic_u = rcurve.IsClosed
 
+    N = len(pts)
+
+    # creating a new spline already adds one point, so add
+    # here only N-1 points
     nurbs.points.add(N - 1)
+
     for i in range(0, N):
         rpt = rcurve.Points[i]
         nurbs.points[i].co = (rpt.X * scale, rpt.Y * scale, rpt.Z * scale, rpt.W * scale)
 
-    #nurbs.use_bezier_u = True
-    nurbs.use_endpoint_u = True
+    nurbs.resolution_u = 12
+    nurbs.use_bezier_u = False
+    nurbs.use_endpoint_u = not rcurve.IsClosed
+    nurbs.use_cyclic_u = rcurve.IsClosed
     nurbs.order_u = rcurve.Order
 
-    return nurbs
+    # For curves we don't want V to be used
+    # so set to 1 and False where applicable
+    nurbs.resolution_v = 1
+    nurbs.use_bezier_v = False
+    nurbs.use_endpoint_v = False
+    nurbs.use_cyclic_v = False
+    nurbs.order_v = 1
+
 
 CONVERT[r3d.NurbsCurve] = import_nurbs_curve
 
@@ -157,7 +178,7 @@ def import_curve(context, ob, name, scale, options):
 
     if type(og) in CONVERT.keys():
         curve_data.dimensions = '3D'
-        curve_data.resolution_u = 2
+        curve_data.resolution_u = 2 if type(og) in (r3d.PolylineCurve, r3d.LineCurve) else 12
 
         CONVERT[type(og)](og, curve_data, scale)
 
