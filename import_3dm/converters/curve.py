@@ -25,6 +25,7 @@ import rhino3dm as r3d
 from  . import utils
 
 from mathutils import Vector
+from mathutils.geometry import intersect_line_line
 
 CONVERT = {}
 
@@ -35,14 +36,14 @@ def import_null(rcurve, bcurve, scale):
 
 def import_line(rcurve, bcurve, scale):
 
-    fr = rcurve.Line.From
-    to = rcurve.Line.To
+    fr = point_to_vector(rcurve.Line.From) * scale
+    to = point_to_vector(rcurve.Line.To) * scale
 
     line = bcurve.splines.new('POLY')
     line.points.add(1)
 
-    line.points[0].co = (fr.X * scale, fr.Y * scale, fr.Z * scale, 1)
-    line.points[1].co = (to.X * scale, to.Y * scale, to.Z * scale, 1)
+    line.points[0].co = (fr.x, fr.y, fr.z, 1)
+    line.points[1].co = (to.x, to.y, to.z, 1)
 
     return line
 
@@ -66,7 +67,7 @@ def import_polyline(rcurve, bcurve, scale):
 
 CONVERT[r3d.PolylineCurve] = import_polyline
 
-def import_nurbs_curve(rcurve, bcurve, scale):
+def import_nurbs_curve(rcurve, bcurve, scale, is_arc = False):
     # create a list of points where
     # we ensure we don't have duplicates. Rhino curves
     # may have duplicate points, which Blender doesn't like
@@ -87,13 +88,30 @@ def import_nurbs_curve(rcurve, bcurve, scale):
     # here only N-1 points
     nurbs.points.add(N - 1)
 
-    for i in range(0, N):
-        rpt = rcurve.Points[i]
-        nurbs.points[i].co = (rpt.X * scale, rpt.Y * scale, rpt.Z * scale, rpt.W * scale)
 
+    # if we have a rational curve we may need to adjust control points with their
+    # weights. Otherwise we'll get completely weird curves in Blender.
+    # dividing the CVs with their weights gives what we are looking for.
+    if rcurve.IsRational:
+        if rcurve.IsClosed:
+            is_arc = True
+        _pts = pts[:]
+        pts = list()
+        for _p in _pts:
+            w = 1 / _p.W
+            p3d = r3d.Point3d(_p.X, _p.Y, _p.Z) * w
+            pts.append(r3d.Point4d(p3d.X, p3d.Y, p3d.Z, _p.W))
+
+
+    # add the CVs to the Blender NURBS curve
+    for i in range(0, N):
+        rpt = pts[i]
+        nurbs.points[i].co = (rpt.X * scale, rpt.Y * scale, rpt.Z * scale, rpt.W)
+
+    # set relevant properties
     nurbs.resolution_u = 12
-    nurbs.use_bezier_u = False
-    nurbs.use_endpoint_u = not rcurve.IsClosed
+    nurbs.use_bezier_u = rcurve.IsRational # set to bezier when rational
+    nurbs.use_endpoint_u = is_arc if is_arc else not rcurve.IsClosed
     nurbs.use_cyclic_u = rcurve.IsClosed
     nurbs.order_u = rcurve.Order
 
@@ -108,56 +126,62 @@ def import_nurbs_curve(rcurve, bcurve, scale):
 
 CONVERT[r3d.NurbsCurve] = import_nurbs_curve
 
+def point_to_vector(point) -> Vector:
+    return Vector((point.X, point.Y, point.Z))
+
+
 def import_arc(rcurve, bcurve, scale):
+    arc = rcurve.Arc
 
-    spt = Vector((rcurve.Arc.StartPoint.X, rcurve.Arc.StartPoint.Y, rcurve.Arc.StartPoint.Z)) * scale
-    ept = Vector((rcurve.Arc.EndPoint.X, rcurve.Arc.EndPoint.Y, rcurve.Arc.EndPoint.Z)) * scale
-    cpt = Vector((rcurve.Arc.Center.X, rcurve.Arc.Center.Y, rcurve.Arc.Center.Z)) * scale
+    angle_degrees = arc.AngleDegrees
 
-    r1 = spt - cpt
-    r2 = ept - cpt
+    start_angle = arc.StartAngle
+    end_angle = arc.EndAngle
+    sweep_angle = end_angle - start_angle
 
-    r1.normalize()
-    r2.normalize()
+    blender_arc = bcurve.splines.new('NURBS')
 
-    d = rcurve.Arc.Length * scale
+    if angle_degrees <= 90:
+        cv_count = 3
+    elif angle_degrees <= 180:
+        cv_count = 5
+    else:
+        cv_count = 9
 
-    normal = r1.cross(r2)
+    blender_arc.points.add(cv_count - 1 ) # creating spline already has one point, so add N-1 points
 
-    t1 = normal.cross(r1)
-    t2 = normal.cross(r2)
+    # set curve U properties
+    blender_arc.use_bezier_u = True
+    blender_arc.order_u = 3
+    blender_arc.use_cyclic_u = False
+    blender_arc.use_endpoint_u = True
 
-    '''
-    Temporary arc
-    '''
-    arc = bcurve.splines.new('NURBS')
+    # curve, so no V direction
+    blender_arc.order_v = 1
+    blender_arc.resolution_v = 1
+    blender_arc.use_bezier_v = False
+    blender_arc.use_endpoint_v = False
+    blender_arc.use_cyclic_v = False
 
-    arc.use_cyclic_u = False
+    points = list()
+    for i in range(cv_count):
+        radian_step = 1.0 / (cv_count - 1)
+        sweep_step = radian_step * sweep_angle
 
-    arc.points.add(3)
+        for i in range(cv_count):
+            p = arc.PointAt(i * sweep_step)
+            points.append(p)
+            if i%2:
+                l = r3d.Line(p, arc.Center)
+                l2 = r3d.Line(points[i-1], points[i-1] + arc.TangentAt(radian_step * (i-1) * arc.AngleRadians))
+                b = r3d.Intersection.LineLine(l, l2)
+                points[i] = l.PointAt(b[1])
 
-    arc.points[0].co = (spt.x, spt.y, spt.z, 1)
+    for i in range(cv_count):
+        p = point_to_vector(points[i]) * scale
+        weight = 1 if i%2==0 else 0.70711
+        blender_arc.points[i].co = (p.x, p.y, p.z, weight)
 
-    sspt = spt + t1 * d * 0.33
-    arc.points[1].co = (sspt.x, sspt.y, sspt.z, 1)
-
-    eept = ept - t2 * d * 0.33
-    arc.points[2].co = (eept.x, eept.y, eept.z, 1)
-
-    arc.points[3].co = (ept.x, ept.y, ept.z, 1)
-
-    '''
-    print("ARC")
-    print("    StartPoint:", rcurve.Arc.StartPoint)
-    print("      EndPoint:", rcurve.Arc.EndPoint)
-    print("        Center:", rcurve.Arc.Center)
-    print("        Radius:", rcurve.Radius)
-    '''
-
-    arc.use_endpoint_u = True
-    arc.order_u = 3
-
-    return arc
 
 CONVERT[r3d.ArcCurve] = import_arc
 
