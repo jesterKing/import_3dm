@@ -131,56 +131,8 @@ def point_to_vector(point) -> Vector:
 
 
 def import_arc(rcurve, bcurve, scale):
-    arc = rcurve.Arc
-
-    angle_degrees = arc.AngleDegrees
-
-    start_angle = arc.StartAngle
-    end_angle = arc.EndAngle
-    sweep_angle = end_angle - start_angle
-
-    blender_arc = bcurve.splines.new('NURBS')
-
-    if angle_degrees <= 90:
-        cv_count = 3
-    elif angle_degrees <= 180:
-        cv_count = 5
-    else:
-        cv_count = 9
-
-    blender_arc.points.add(cv_count - 1 ) # creating spline already has one point, so add N-1 points
-
-    # set curve U properties
-    blender_arc.use_bezier_u = True
-    blender_arc.order_u = 3
-    blender_arc.use_cyclic_u = False
-    blender_arc.use_endpoint_u = True
-
-    # curve, so no V direction
-    blender_arc.order_v = 1
-    blender_arc.resolution_v = 1
-    blender_arc.use_bezier_v = False
-    blender_arc.use_endpoint_v = False
-    blender_arc.use_cyclic_v = False
-
-    points = list()
-    for i in range(cv_count):
-        radian_step = 1.0 / (cv_count - 1)
-        sweep_step = radian_step * sweep_angle
-
-        for i in range(cv_count):
-            p = arc.PointAt(i * sweep_step)
-            points.append(p)
-            if i%2:
-                l = r3d.Line(p, arc.Center)
-                l2 = r3d.Line(points[i-1], points[i-1] + arc.TangentAt(radian_step * (i-1) * arc.AngleRadians))
-                b = r3d.Intersection.LineLine(l, l2)
-                points[i] = l.PointAt(b[1])
-
-    for i in range(cv_count):
-        p = point_to_vector(points[i]) * scale
-        weight = 1 if i%2==0 else 0.70711
-        blender_arc.points[i].co = (p.x, p.y, p.z, weight)
+    nc_arc = rcurve.Arc.ToNurbsCurve()
+    import_nurbs_curve(nc_arc, bcurve, scale, is_arc=True)
 
 
 CONVERT[r3d.ArcCurve] = import_arc
