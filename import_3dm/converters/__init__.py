@@ -24,6 +24,8 @@ import rhino3dm as r3d
 import bpy
 from bpy import context
 
+import uuid
+
 from typing import Any, Dict
 
 from .material import handle_materials, material_name, DEFAULT_RHINO_MATERIAL
@@ -34,6 +36,7 @@ from .views import handle_views
 from .groups import handle_groups
 from .instances import import_instance_reference, handle_instance_definitions, populate_instance_definitions
 from .pointcloud import import_pointcloud
+from .annotation import import_annotation
 
 from . import utils
 
@@ -48,6 +51,7 @@ RHINO_TYPE_TO_IMPORT = {
     r3d.ObjectType.SubD : import_render_mesh,
     r3d.ObjectType.Curve : import_curve,
     r3d.ObjectType.PointSet: import_pointcloud,
+    r3d.ObjectType.Annotation: import_annotation,
     #r3d.ObjectType.InstanceReference : import_instance_reference
 }
 
@@ -73,8 +77,16 @@ def convert_object(
     data = None
     blender_object = None
 
+    # Text curve is created by annotation import.
+    # this needs to be added as an extra object
+    # and parented to the annotation main import object
+    text_curve = None
+    text_object = None
     if ob.Geometry.ObjectType in RHINO_TYPE_TO_IMPORT:
         data = RHINO_TYPE_TO_IMPORT[ob.Geometry.ObjectType](context, ob, name, scale, options)
+        if ob.Geometry.ObjectType == r3d.ObjectType.Annotation:
+            text_curve = data[1]
+            data = data[0]
 
     mat_from_object = ob.Attributes.MaterialSource == r3d.ObjectMaterialSource.MaterialFromObject
 
@@ -82,6 +94,13 @@ def convert_object(
     if data:
         data.materials.append(rhinomat)
         blender_object = utils.get_or_create_iddata(context.blend_data.objects, tags, data)
+        if text_curve:
+            text_tags = utils.create_tag_dict(uuid.uuid1(), f"TXT{ob.Attributes.Name}")
+            text_object = utils.get_or_create_iddata(context.blend_data.objects, text_tags, text_curve[0])
+            text_object.parent = blender_object
+            texobpt = text_curve[1]
+            #text_object.location = (texobpt.X, texobpt.Y, texobpt.Z)
+            text_object.matrix_world = texobpt
     else:
         blender_object = context.blend_data.objects.new(name+"_Instance", None)
         utils.tag_data(blender_object, tags)
@@ -120,5 +139,7 @@ def convert_object(
     if not ob.Attributes.IsInstanceDefinitionObject:
         try:
             layer.objects.link(blender_object)
+            if text_object:
+                layer.objects.link(text_object)
         except Exception:
             pass

@@ -88,6 +88,12 @@ def read_3dm(
         print("Failed to import .3dm model: {}".format(filepath))
         return {'CANCELLED'}
 
+
+    # place model in context so we can access it when we need to
+    # find data from different tables, like for instance dimension
+    # styles while working on annotation import.
+    options["rh_model"] = model
+
     toplayer = create_or_get_top_layer(context, filepath)
 
     # Get proper scale for conversion
