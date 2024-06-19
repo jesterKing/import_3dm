@@ -158,6 +158,7 @@ def import_dim_linear(model, dimlin, bc, scale):
 
 
 CONVERT[r3d.AnnotationTypes.Aligned] = import_dim_linear
+CONVERT[r3d.AnnotationTypes.Rotated] = import_dim_linear
 
 
 def import_radius(model, dimrad, bc, scale):
