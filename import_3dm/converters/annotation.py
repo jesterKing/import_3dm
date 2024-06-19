@@ -257,6 +257,24 @@ def import_angular(model, dimang, bc, scale):
 CONVERT[r3d.AnnotationTypes.Angular] = import_angular
 
 
+def import_leader(model, dimlead, bc, scale):
+    txt = dimlead.PlainText
+    dimstyle = model.DimStyles.FindId(dimlead.DimensionStyleId)
+    pts = dimlead.Points
+    textptuv = dimlead.GetTextPoint2d(dimstyle, 1.0)
+    textpt = dimlead.Plane.PointAt(textptuv.X, textptuv.Y)
+
+    for i in range(0, len(pts)-1):
+        _populate_line(dimstyle, PartType.DimensionLine, dimlead.Plane, bc, pts[i], pts[i+1], scale)
+
+    _add_arrow(dimstyle, PartType.DimensionLine, dimlead.Plane, bc, pts[0], pts[1], Arrow.Leader)
+
+    return _add_text(dimstyle, dimlead.Plane, bc, textpt, txt, scale)
+
+
+CONVERT[r3d.AnnotationTypes.Leader] = import_leader
+
+
 def import_annotation(context, ob, name, scale, options):
     if not "rh_model" in options:
         return
