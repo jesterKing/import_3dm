@@ -22,7 +22,8 @@
 
 
 import rhino3dm as r3d
-from  . import utils
+from . import utils
+from . import curve
 
 from mathutils import Vector
 import math
@@ -36,53 +37,60 @@ class PartType(IntEnum):
 
 CONVERT = {}
 
-ARROWS = {}
-
-ARROWS[r3d.ArrowheadTypes.SolidTriangle] = [(0.0, 0.0), (-1.0, 0.25), (-1.0, -0.25)]
-ARROWS[r3d.ArrowheadTypes.Dot] = [
-    (0.5, 0.0), (0.483, 0.129), (0.433, 0.25), (0.353, 0.353), (0.25, 0.433), (0.129, 0.483),
-    (0.0, 0.5), (-0.129, 0.483), (-0.25, 0.433), (-0.353, 0.353), (-0.433, 0.25), (-0.483, 0.129),
-    (-0.5, 0.0), (-0.483, -0.129), (-0.433, -0.25), (-0.353, -0.353), (-0.25, -0.433), (-0.129, -0.483),
-    (0.0, -0.5), (0.129, -0.483), (0.25, -0.433), (0.353, -0.353), (0.433, -0.25), (0.483, -0.129)]
-ARROWS[r3d.ArrowheadTypes.Tick] = [ (-0.46, -0.54), (0.54, 0.46), (0.46, 0.54), (-0.54, -0.46) ]
-ARROWS[r3d.ArrowheadTypes.ShortTriangle] = [(0.0, 0.0), (-0.5, 0.5), (-0.5, -0.5)]
-ARROWS[r3d.ArrowheadTypes.OpenArrow] = [(0.0, 0.0), (-0.707, 0.707), (-0.777, 0.636), (-0.141, 0.0), (-0.777, -0.636), (-0.707, -0.707)]
-ARROWS[r3d.ArrowheadTypes.Rectangle] = [(0.0, 0.0), (-1.0, 0.0), (-1.0, 0.2), (0.0, 0.2)]
-ARROWS[r3d.ArrowheadTypes.LongTriangle] = [(0.0, 0.0), (-1.0, 0.125), (-1.0, -0.125)]
-ARROWS[r3d.ArrowheadTypes.LongerTriangle] = [(0.0, 0.0), (-1.0, 0.0833), (-1.0, -0.0833)]
 
 class Arrow(IntEnum):
     Arrow1 = auto()
     Arrow2 = auto()
     Leader = auto()
+    Leader2 = auto() # used in angular for second arrow
+
 
 def _arrowtype_from_arrow(dimstyle : r3d.DimensionStyle, arrow : Arrow):
     if arrow == Arrow.Arrow1:
         return dimstyle.ArrowType1
     elif arrow == Arrow.Arrow2:
         return dimstyle.ArrowType2
-    elif arrow == Arrow.Leader:
+    elif arrow in (Arrow.Leader, Arrow.Leader2):
         return dimstyle.LeaderArrowType
 
-def _arrowpoints_inside(arrowhead_points, arrow: Arrow, inside):
-    if arrow == Arrow.Arrow1 and inside:
-        arrowhead_points = [(-p[0], -p[1]) for p in arrowhead_points]
-    if arrow == Arrow.Arrow2 and not inside:
-        arrowhead_points = [(-p[0], -p[1]) for p in arrowhead_points]
-    return arrowhead_points
+
+def _negate_vector3d(v : r3d.Vector3d):
+    return r3d.Vector3d(-v.X, -v.Y, -v.Z)
+
+def _rotate_plane_to_line(plane : r3d.Plane, line : r3d.Line, addangle=0.0):
+    rotangle = r3d.Vector3d.VectorAngle(_negate_vector3d(line.Direction), plane.XAxis) + addangle
+    dpx = r3d.Vector3d.DotProduct(line.Direction, plane.XAxis)
+    dpy = r3d.Vector3d.DotProduct(line.Direction, plane.YAxis)
+    if dpx < 0 and dpy > 0 or dpx > 0 and dpy > 0:
+        rotangle = 2*math.pi - rotangle
+    plane = plane.Rotate(rotangle, plane.ZAxis)
+    return plane
 
 
 def _add_arrow(dimstyle : r3d.DimensionStyle, pt : PartType, plane : r3d.Plane, bc, tip : r3d.Point3d, tail : r3d.Point3d, arrow : Arrow):
     arrtype = _arrowtype_from_arrow(dimstyle, arrow)
-    arrowhead_points = ARROWS[arrtype]
+    arrowhead_points = r3d.Arrowhead.GetPoints(arrtype, 1.0)
     arrowhead = bc.splines.new('POLY')
     arrowhead.use_cyclic_u = True
     arrowhead.points.add(len(arrowhead_points)-1)
     l = r3d.Line(tip, tail)
     arrowLength = dimstyle.ArrowLength
-    inside = arrowLength * 2 < l.Length
+    inside = arrowLength * 2 < l.Length if arrow not in (Arrow.Leader, Arrow.Leader2) else True
 
     tip_plane = r3d.Plane(tip, plane.XAxis, plane.YAxis)
+
+    if arrow == Arrow.Leader:
+        # rotate tip_plane so we get correct orientation of arrowhead
+        """
+        rotangle = r3d.Vector3d.VectorAngle(_negate_vector3d(l.Direction), tip_plane.XAxis)
+        dpx = r3d.Vector3d.DotProduct(l.Direction, tip_plane.XAxis)
+        dpy = r3d.Vector3d.DotProduct(l.Direction, tip_plane.YAxis)
+        if dpx < 0 and dpy > 0 or dpx > 0 and dpy > 0:
+            rotangle = 2*math.pi - rotangle
+        tip_plane = tip_plane.Rotate(rotangle, tip_plane.ZAxis)
+        """
+        tip_plane = _rotate_plane_to_line(tip_plane, l)
+
     if arrtype in (r3d.ArrowheadTypes.SolidTriangle, r3d.ArrowheadTypes.ShortTriangle, r3d.ArrowheadTypes.OpenArrow, r3d.ArrowheadTypes.LongTriangle, r3d.ArrowheadTypes.LongerTriangle):
         if inside and arrow == Arrow.Arrow1:
             tip_plane = tip_plane.Rotate(math.pi, tip_plane.ZAxis)
@@ -95,7 +103,7 @@ def _add_arrow(dimstyle : r3d.DimensionStyle, pt : PartType, plane : r3d.Plane, 
     if inside:
         for i in range(0, len(arrowhead_points)):
             uv = arrowhead_points[i]
-            p = tip_plane.PointAt(uv[0], uv[1])
+            p = tip_plane.PointAt(uv.X, uv.Y)
             arrowhead.points[i].co = (p.X, p.Y, p.Z, 1)
 
 
@@ -108,8 +116,8 @@ def _populate_line(dimstyle : r3d.DimensionStyle, pt : PartType, plane : r3d.Pla
     if pt == PartType.ExtensionLine:
         ext = dimstyle.ExtensionLineExtension
         offset = dimstyle.ExtensionLineOffset
-        extfr = 1.0 + ext / rhl.Length
-        offsetfr = offset / rhl.Length
+        extfr = 1.0 + ext / rhl.Length if rhl.Length > 0 else 0.0
+        offsetfr = offset / rhl.Length if rhl.Length > 0 else 0.0
         pt1 = rhl.PointAt(offsetfr)
         pt2 = rhl.PointAt(extfr)
 
@@ -123,13 +131,16 @@ def _populate_line(dimstyle : r3d.DimensionStyle, pt : PartType, plane : r3d.Pla
 def _add_text(dimstyle : r3d.DimensionStyle, plane : r3d.Plane, bc, pt : r3d.Point3d, txt : str, scale : float):
     textcurve = bpy.context.blend_data.curves.new(name="annotation_text", type="FONT")
     textcurve.body = txt
-    textcurve.size = dimstyle.TextHeight * scale
+    # for now only use blender built-in font. Scale that down to
+    # 0.8 since it is a bit larger than Rhino default Arial
+    textcurve.size = dimstyle.TextHeight * scale * 0.8
     textcurve.align_x = 'CENTER'
     pt *= scale
     plane = r3d.Plane(pt, plane.XAxis, plane.YAxis)
     xform = r3d.Transform.PlaneToPlane(r3d.Plane.WorldXY(), plane)
 
     return (textcurve, utils.matrix_from_xform(xform))
+
 
 def import_dim_linear(model, dimlin, bc, scale):
     pts = dimlin.Points
@@ -148,10 +159,102 @@ def import_dim_linear(model, dimlin, bc, scale):
 
 CONVERT[r3d.AnnotationTypes.Aligned] = import_dim_linear
 
+
 def import_radius(model, dimrad, bc, scale):
-    pass
+    pts = dimrad.Points
+    txt = dimrad.PlainText
+    dimstyle = model.DimStyles.FindId(dimrad.DimensionStyleId)
+    p = dimrad.Plane
+
+    _populate_line(dimstyle, PartType.DimensionLine, p, bc, pts["radiuspt"], pts["dimlinept"], scale)
+    _populate_line(dimstyle, PartType.DimensionLine, p, bc, pts["dimlinept"], pts["kneept"], scale)
+    _add_arrow(dimstyle, PartType.DimensionLine, p, bc, pts["radiuspt"], pts["dimlinept"], Arrow.Leader)
+
+    return _add_text(dimstyle, p, bc, pts["kneept"], txt, scale)
+
 
 CONVERT[r3d.AnnotationTypes.Radius] = import_radius
+CONVERT[r3d.AnnotationTypes.Diameter] = import_radius
+
+
+def import_angular(model, dimang, bc, scale):
+    pts = dimang.Points
+    r = dimang.Radius
+    a = dimang.Angle
+    txt = dimang.PlainText
+    dimstyle = model.DimStyles.FindId(dimang.DimensionStyleId)
+    p = dimang.Plane
+
+    # first calculate the midpoint of the arc. We do that by
+    # 1. a line between the arrow points
+    # 2. take line midpoint
+    # 3. extend line to be length of radius
+
+    # 1.
+    midline = r3d.Line(pts["arrowpt1"], pts["arrowpt2"])
+    # 2.
+    mp = midline.PointAt(0.5)
+    midline = r3d.Line(pts["centerpt"], mp)
+    frac = r / midline.Length
+    # larger arc, so negate fraction to get point
+    # on the correct side of the line.
+    addangle = math.pi * -0.5
+    if a > math.pi:
+        frac = -frac
+        addangle = math.pi * 1.5
+    # 3. get point on line that will be the midpoint of the arc
+    mp = midline.PointAt(frac)
+
+    # create the arc that is the angular dimension line
+    arc = r3d.Arc(pts["arrowpt1"], mp, pts["arrowpt2"])
+    # convert to nurbs curve, then import into Blender
+    nc_arc = arc.ToNurbsCurve()
+    curve.import_nurbs_curve(nc_arc, bc, scale, is_arc=True)
+
+    # calculate the arrow tail points. These points we can pass
+    # on to the arrow import function to ensure they are in a
+    # mostly correct orientation.
+    arrowLength = dimstyle.ArrowLength
+    arclen = arc.Length
+
+    T0 = nc_arc.Domain.T0
+    T1 = nc_arc.Domain.T1
+    domlen = T1 - T0
+
+    lenfrac = domlen / arclen
+    arr_frac = arrowLength / domlen * lenfrac
+
+    endpt1 = nc_arc.PointAt(T0 + arr_frac)
+    endpt2 = nc_arc.PointAt(T1 - arr_frac)
+
+    """
+    # Debug code adding empties for end points
+    for ep, dispt in ((endpt1, 'PLAIN_AXES'), (endpt2, 'ARROWS')):
+        tstob = bpy.context.blend_data.objects.new("tst", None)
+        tstob.location = (ep.X, ep.Y, ep.Z)
+        tstob.empty_display_type = dispt
+        tstob.empty_display_size = 0.3
+        bpy.context.blend_data.collections[0].objects.link(tstob)
+    """
+
+    # Add the arrow heads
+    _add_arrow(dimstyle, PartType.DimensionLine, p, bc, pts["arrowpt1"], endpt1, Arrow.Leader)
+    _add_arrow(dimstyle, PartType.DimensionLine, p, bc, pts["arrowpt2"], endpt2, Arrow.Leader)
+
+    # set up the text plane
+    textplane = dimang.Plane
+    # rotate it according the midline and add extra angle to orient the text
+    # correctly
+    textplane = _rotate_plane_to_line(textplane, midline, addangle=addangle)
+    textplane = r3d.Plane(pts["textpt"], textplane.XAxis, textplane.YAxis)
+
+    # add the text and return the text curve so it can be added
+    # properly to the scene, parented to the main annotation object
+    return _add_text(dimstyle, textplane, bc, pts["textpt"], txt, scale)
+
+
+CONVERT[r3d.AnnotationTypes.Angular] = import_angular
+
 
 def import_annotation(context, ob, name, scale, options):
     if not "rh_model" in options:
@@ -169,5 +272,7 @@ def import_annotation(context, ob, name, scale, options):
 
     if og.AnnotationType in CONVERT:
         text = CONVERT[og.AnnotationType](model, og, curve_data, scale)
+    else:
+        print(f"Annotation type {og.AnnotationType} not implemented")
 
     return (curve_data, text)
