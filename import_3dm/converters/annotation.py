@@ -198,8 +198,10 @@ def import_angular(model, dimang, bc, scale):
     for line in displines["lines"]:
         _populate_line(dimstyle, PartType.DimensionLine, p, bc, line.From, line.To, scale)
 
-
-    midline = r3d.Line(pts["arrowpt1"], pts["arrowpt2"])
+    # set up midline and angle addition for text plane orientation
+    arrow_line= r3d.Line(pts["arrowpt2"], pts["arrowpt1"])
+    mp = arrow_line.PointAt(0.5)
+    midline = r3d.Line(mp, pts["centerpt"])
     addangle = math.pi * -0.5
     if a > math.pi:
         addangle = math.pi * 1.5
