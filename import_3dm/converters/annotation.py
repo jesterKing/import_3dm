@@ -108,11 +108,13 @@ def _add_arrow(dimstyle : r3d.DimensionStyle, pt : PartType, plane : r3d.Plane, 
 
 
 def _populate_line(dimstyle : r3d.DimensionStyle, pt : PartType, plane : r3d.Plane, bc, pt1 : r3d.Point3d, pt2 : r3d.Point3d, scale : float):
+    rhl = r3d.Line(pt1, pt2)
+    if rhl.Length < 1e-6:
+        return
     line = bc.splines.new('POLY')
     line.points.add(1)
 
     # create line between given points
-    rhl = r3d.Line(pt1, pt2)
     if pt == PartType.ExtensionLine:
         ext = dimstyle.ExtensionLineExtension
         offset = dimstyle.ExtensionLineOffset
@@ -128,13 +130,13 @@ def _populate_line(dimstyle : r3d.DimensionStyle, pt : PartType, plane : r3d.Pla
     line.points[1].co = (pt2.X, pt2.Y, pt2.Z, 1)
 
 
-def _add_text(dimstyle : r3d.DimensionStyle, plane : r3d.Plane, bc, pt : r3d.Point3d, txt : str, scale : float):
+def _add_text(dimstyle : r3d.DimensionStyle, plane : r3d.Plane, bc, pt : r3d.Point3d, txt : str, scale : float, left=False):
     textcurve = bpy.context.blend_data.curves.new(name="annotation_text", type="FONT")
     textcurve.body = txt
     # for now only use blender built-in font. Scale that down to
     # 0.8 since it is a bit larger than Rhino default Arial
     textcurve.size = dimstyle.TextHeight * scale * 0.8
-    textcurve.align_x = 'CENTER'
+    textcurve.align_x = 'CENTER' if not left else 'LEFT'
     pt *= scale
     plane = r3d.Plane(pt, plane.XAxis, plane.YAxis)
     xform = r3d.Transform.PlaneToPlane(r3d.Plane.WorldXY(), plane)
@@ -273,6 +275,26 @@ def import_leader(model, dimlead, bc, scale):
 
 
 CONVERT[r3d.AnnotationTypes.Leader] = import_leader
+
+
+def import_ordinate(model, dimordinate, bc, scale):
+    txt = dimordinate.PlainText
+    dimstyle = model.DimStyles.FindId(dimordinate.DimensionStyleId)
+    pts = dimordinate.Points
+    textplane = dimordinate.Plane
+    l = r3d.Line(pts["kinkpt1"], pts["defpt"])
+    textplane = _rotate_plane_to_line(textplane, l)
+
+    #_populate_line(dimstyle, PartType.DimensionLine, dimordinate.Plane, bc, pts["basept"], pts["defpt"], scale)
+    _populate_line(dimstyle, PartType.DimensionLine, dimordinate.Plane, bc, pts["defpt"], pts["kinkpt1"], scale)
+    _populate_line(dimstyle, PartType.DimensionLine, dimordinate.Plane, bc, pts["kinkpt1"], pts["kinkpt2"], scale)
+    _populate_line(dimstyle, PartType.DimensionLine, dimordinate.Plane, bc, pts["kinkpt2"], pts["leaderpt"], scale)
+
+
+    return _add_text(dimstyle, textplane, bc, pts["leaderpt"], txt, scale, left=True)
+
+
+CONVERT[r3d.AnnotationTypes.Ordinate] = import_ordinate
 
 
 def import_annotation(context, ob, name, scale, options):
