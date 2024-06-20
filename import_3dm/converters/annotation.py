@@ -149,10 +149,13 @@ def import_dim_linear(model, dimlin, bc, scale):
     txt = dimlin.PlainText
     dimstyle = model.DimStyles.FindId(dimlin.DimensionStyleId)
     p = dimlin.Plane
+    displines = dimlin.GetDisplayLines(dimstyle)
 
-    _populate_line(dimstyle, PartType.ExtensionLine, p, bc, pts["defpt1"], pts["arrowpt1"], scale)
-    _populate_line(dimstyle, PartType.ExtensionLine, p, bc, pts["defpt2"], pts["arrowpt2"], scale)
-    _populate_line(dimstyle, PartType.DimensionLine, p, bc, pts["arrowpt1"], pts["arrowpt2"], scale)
+    for displine in displines["lines"]:
+        _populate_line(dimstyle, PartType.DimensionLine, p, bc, displine.From, displine.To, scale)
+    #_populate_line(dimstyle, PartType.ExtensionLine, p, bc, pts["defpt1"], pts["arrowpt1"], scale)
+    #_populate_line(dimstyle, PartType.ExtensionLine, p, bc, pts["defpt2"], pts["arrowpt2"], scale)
+    #_populate_line(dimstyle, PartType.DimensionLine, p, bc, pts["arrowpt1"], pts["arrowpt2"], scale)
     _add_arrow(dimstyle, PartType.DimensionLine, p, bc, pts["arrowpt1"], pts["arrowpt2"], Arrow.Arrow1)
     _add_arrow(dimstyle, PartType.DimensionLine, p, bc, pts["arrowpt2"], pts["arrowpt1"], Arrow.Arrow2)
 
@@ -168,9 +171,12 @@ def import_radius(model, dimrad, bc, scale):
     txt = dimrad.PlainText
     dimstyle = model.DimStyles.FindId(dimrad.DimensionStyleId)
     p = dimrad.Plane
+    displines = dimrad.GetDisplayLines(dimstyle)
 
-    _populate_line(dimstyle, PartType.DimensionLine, p, bc, pts["radiuspt"], pts["dimlinept"], scale)
-    _populate_line(dimstyle, PartType.DimensionLine, p, bc, pts["dimlinept"], pts["kneept"], scale)
+    #_populate_line(dimstyle, PartType.DimensionLine, p, bc, pts["radiuspt"], pts["dimlinept"], scale)
+    #_populate_line(dimstyle, PartType.DimensionLine, p, bc, pts["dimlinept"], pts["kneept"], scale)
+    for displine in displines["lines"]:
+        _populate_line(dimstyle, PartType.DimensionLine, p, bc, displine.From, displine.To, scale)
     _add_arrow(dimstyle, PartType.DimensionLine, p, bc, pts["radiuspt"], pts["dimlinept"], Arrow.Leader)
 
     return _add_text(dimstyle, p, bc, pts["kneept"], txt, scale)
@@ -186,33 +192,22 @@ def import_angular(model, dimang, bc, scale):
     a = dimang.Angle
     txt = dimang.PlainText
     dimstyle = model.DimStyles.FindId(dimang.DimensionStyleId)
+    displines = dimang.GetDisplayLines(dimstyle)
     p = dimang.Plane
 
-    # first calculate the midpoint of the arc. We do that by
-    # 1. a line between the arrow points
-    # 2. take line midpoint
-    # 3. extend line to be length of radius
+    for line in displines["lines"]:
+        _populate_line(dimstyle, PartType.DimensionLine, p, bc, line.From, line.To, scale)
 
-    # 1.
+
     midline = r3d.Line(pts["arrowpt1"], pts["arrowpt2"])
-    # 2.
-    mp = midline.PointAt(0.5)
-    midline = r3d.Line(pts["centerpt"], mp)
-    frac = r / midline.Length
-    # larger arc, so negate fraction to get point
-    # on the correct side of the line.
     addangle = math.pi * -0.5
     if a > math.pi:
-        frac = -frac
         addangle = math.pi * 1.5
-    # 3. get point on line that will be the midpoint of the arc
-    mp = midline.PointAt(frac)
 
-    # create the arc that is the angular dimension line
-    arc = r3d.Arc(pts["arrowpt1"], mp, pts["arrowpt2"])
-    # convert to nurbs curve, then import into Blender
-    nc_arc = arc.ToNurbsCurve()
-    curve.import_nurbs_curve(nc_arc, bc, scale, is_arc=True)
+    for arc in displines["arcs"]:
+        nc_arc = arc.ToNurbsCurve()
+        curve.import_nurbs_curve(nc_arc, bc, scale, is_arc=True)
+    arc = displines["arcs"][0]
 
     # calculate the arrow tail points. These points we can pass
     # on to the arrow import function to ensure they are in a
@@ -283,14 +278,12 @@ def import_ordinate(model, dimordinate, bc, scale):
     dimstyle = model.DimStyles.FindId(dimordinate.DimensionStyleId)
     pts = dimordinate.Points
     textplane = dimordinate.Plane
+    displines = dimordinate.GetDisplayLines(dimstyle)
     l = r3d.Line(pts["kinkpt1"], pts["defpt"])
     textplane = _rotate_plane_to_line(textplane, l)
 
-    #_populate_line(dimstyle, PartType.DimensionLine, dimordinate.Plane, bc, pts["basept"], pts["defpt"], scale)
-    _populate_line(dimstyle, PartType.DimensionLine, dimordinate.Plane, bc, pts["defpt"], pts["kinkpt1"], scale)
-    _populate_line(dimstyle, PartType.DimensionLine, dimordinate.Plane, bc, pts["kinkpt1"], pts["kinkpt2"], scale)
-    _populate_line(dimstyle, PartType.DimensionLine, dimordinate.Plane, bc, pts["kinkpt2"], pts["leaderpt"], scale)
-
+    for displine in displines["lines"]:
+        _populate_line(dimstyle, PartType.DimensionLine, dimordinate.Plane, bc, displine.From, displine.To, scale)
 
     return _add_text(dimstyle, textplane, bc, pts["leaderpt"], txt, scale, left=True)
 
@@ -300,7 +293,7 @@ CONVERT[r3d.AnnotationTypes.Ordinate] = import_ordinate
 
 def import_centermark(model, centermark, bc, scale):
     dimstyle = model.DimStyles.FindId(centermark.DimensionStyleId)
-    lines = centermark.DisplayLines(dimstyle)
+    lines = centermark.GetDisplayLines(dimstyle)
     for line in lines:
         _populate_line(dimstyle, PartType.DimensionLine, centermark.Plane, bc, line.From, line.To, scale)
 
