@@ -257,6 +257,7 @@ def import_angular(model, dimang, bc, scale):
 
 
 CONVERT[r3d.AnnotationTypes.Angular] = import_angular
+CONVERT[r3d.AnnotationTypes.Angular3pt] = import_angular
 
 
 def import_leader(model, dimlead, bc, scale):
