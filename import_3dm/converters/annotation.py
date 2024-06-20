@@ -298,6 +298,16 @@ def import_ordinate(model, dimordinate, bc, scale):
 CONVERT[r3d.AnnotationTypes.Ordinate] = import_ordinate
 
 
+def import_centermark(model, centermark, bc, scale):
+    dimstyle = model.DimStyles.FindId(centermark.DimensionStyleId)
+    lines = centermark.DisplayLines(dimstyle)
+    for line in lines:
+        _populate_line(dimstyle, PartType.DimensionLine, centermark.Plane, bc, line.From, line.To, scale)
+
+
+CONVERT[r3d.AnnotationTypes.CenterMark] = import_centermark
+
+
 def import_annotation(context, ob, name, scale, options):
     if not "rh_model" in options:
         return
