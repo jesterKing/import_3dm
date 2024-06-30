@@ -67,7 +67,7 @@ def _rotate_plane_to_line(plane : r3d.Plane, line : r3d.Line, addangle=0.0):
     return plane
 
 
-def _add_arrow(dimstyle : r3d.DimensionStyle, pt : PartType, plane : r3d.Plane, bc, tip : r3d.Point3d, tail : r3d.Point3d, arrow : Arrow):
+def _add_arrow(dimstyle : r3d.DimensionStyle, pt : PartType, plane : r3d.Plane, bc, tip : r3d.Point3d, tail : r3d.Point3d, arrow : Arrow, scale : float):
     arrtype = _arrowtype_from_arrow(dimstyle, arrow)
     arrowhead_points = r3d.Arrowhead.GetPoints(arrtype, 1.0)
     arrowhead = bc.splines.new('POLY')
@@ -81,14 +81,6 @@ def _add_arrow(dimstyle : r3d.DimensionStyle, pt : PartType, plane : r3d.Plane, 
 
     if arrow == Arrow.Leader:
         # rotate tip_plane so we get correct orientation of arrowhead
-        """
-        rotangle = r3d.Vector3d.VectorAngle(_negate_vector3d(l.Direction), tip_plane.XAxis)
-        dpx = r3d.Vector3d.DotProduct(l.Direction, tip_plane.XAxis)
-        dpy = r3d.Vector3d.DotProduct(l.Direction, tip_plane.YAxis)
-        if dpx < 0 and dpy > 0 or dpx > 0 and dpy > 0:
-            rotangle = 2*math.pi - rotangle
-        tip_plane = tip_plane.Rotate(rotangle, tip_plane.ZAxis)
-        """
         tip_plane = _rotate_plane_to_line(tip_plane, l)
 
     if arrtype in (r3d.ArrowheadTypes.SolidTriangle, r3d.ArrowheadTypes.ShortTriangle, r3d.ArrowheadTypes.OpenArrow, r3d.ArrowheadTypes.LongTriangle, r3d.ArrowheadTypes.LongerTriangle):
@@ -104,7 +96,7 @@ def _add_arrow(dimstyle : r3d.DimensionStyle, pt : PartType, plane : r3d.Plane, 
         for i in range(0, len(arrowhead_points)):
             uv = arrowhead_points[i]
             p = tip_plane.PointAt(uv.X, uv.Y)
-            arrowhead.points[i].co = (p.X, p.Y, p.Z, 1)
+            arrowhead.points[i].co = (p.X * scale, p.Y * scale, p.Z * scale, 1)
 
 
 def _populate_line(dimstyle : r3d.DimensionStyle, pt : PartType, plane : r3d.Plane, bc, pt1 : r3d.Point3d, pt2 : r3d.Point3d, scale : float):
@@ -153,11 +145,8 @@ def import_dim_linear(model, dimlin, bc, scale):
 
     for displine in displines["lines"]:
         _populate_line(dimstyle, PartType.DimensionLine, p, bc, displine.From, displine.To, scale)
-    #_populate_line(dimstyle, PartType.ExtensionLine, p, bc, pts["defpt1"], pts["arrowpt1"], scale)
-    #_populate_line(dimstyle, PartType.ExtensionLine, p, bc, pts["defpt2"], pts["arrowpt2"], scale)
-    #_populate_line(dimstyle, PartType.DimensionLine, p, bc, pts["arrowpt1"], pts["arrowpt2"], scale)
-    _add_arrow(dimstyle, PartType.DimensionLine, p, bc, pts["arrowpt1"], pts["arrowpt2"], Arrow.Arrow1)
-    _add_arrow(dimstyle, PartType.DimensionLine, p, bc, pts["arrowpt2"], pts["arrowpt1"], Arrow.Arrow2)
+    _add_arrow(dimstyle, PartType.DimensionLine, p, bc, pts["arrowpt1"], pts["arrowpt2"], Arrow.Arrow1, scale)
+    _add_arrow(dimstyle, PartType.DimensionLine, p, bc, pts["arrowpt2"], pts["arrowpt1"], Arrow.Arrow2, scale)
 
     return _add_text(dimstyle, p, bc, pts["textpt"], txt, scale)
 
@@ -173,11 +162,9 @@ def import_radius(model, dimrad, bc, scale):
     p = dimrad.Plane
     displines = dimrad.GetDisplayLines(dimstyle)
 
-    #_populate_line(dimstyle, PartType.DimensionLine, p, bc, pts["radiuspt"], pts["dimlinept"], scale)
-    #_populate_line(dimstyle, PartType.DimensionLine, p, bc, pts["dimlinept"], pts["kneept"], scale)
     for displine in displines["lines"]:
         _populate_line(dimstyle, PartType.DimensionLine, p, bc, displine.From, displine.To, scale)
-    _add_arrow(dimstyle, PartType.DimensionLine, p, bc, pts["radiuspt"], pts["dimlinept"], Arrow.Leader)
+    _add_arrow(dimstyle, PartType.DimensionLine, p, bc, pts["radiuspt"], pts["dimlinept"], Arrow.Leader, scale)
 
     return _add_text(dimstyle, p, bc, pts["kneept"], txt, scale)
 
@@ -238,8 +225,8 @@ def import_angular(model, dimang, bc, scale):
     """
 
     # Add the arrow heads
-    _add_arrow(dimstyle, PartType.DimensionLine, p, bc, pts["arrowpt1"], endpt1, Arrow.Leader)
-    _add_arrow(dimstyle, PartType.DimensionLine, p, bc, pts["arrowpt2"], endpt2, Arrow.Leader)
+    _add_arrow(dimstyle, PartType.DimensionLine, p, bc, pts["arrowpt1"], endpt1, Arrow.Leader, scale)
+    _add_arrow(dimstyle, PartType.DimensionLine, p, bc, pts["arrowpt2"], endpt2, Arrow.Leader, scale)
 
     # set up the text plane
     textplane = dimang.Plane
@@ -267,7 +254,7 @@ def import_leader(model, dimlead, bc, scale):
     for i in range(0, len(pts)-1):
         _populate_line(dimstyle, PartType.DimensionLine, dimlead.Plane, bc, pts[i], pts[i+1], scale)
 
-    _add_arrow(dimstyle, PartType.DimensionLine, dimlead.Plane, bc, pts[0], pts[1], Arrow.Leader)
+    _add_arrow(dimstyle, PartType.DimensionLine, dimlead.Plane, bc, pts[0], pts[1], Arrow.Leader, scale)
 
     return _add_text(dimstyle, dimlead.Plane, bc, textpt, txt, scale)
 
