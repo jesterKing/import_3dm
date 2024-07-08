@@ -105,6 +105,21 @@ def hash_material(M):
     crc = binascii.crc32(tobytes(M.Transparency), crc)
     return crc
 
+
+def srgb_eotf(srgb_color: Tuple[float, float, float, float]) -> Tuple[float, float, float, float]:
+    # sRGB piece-wise electro optical transfer function
+    # also known as "sRGB to linear"
+    # assuming Rhino uses this instead of pure 2.2 gamma function
+    def cc(value):
+        if value <= 0.04045:
+            return value / 12.92
+        else:
+            return ((value + 0.055) / 1.055) ** 2.4
+
+    linear_color = tuple(cc(x) for x in srgb_color)
+    return linear_color
+
+
 def get_color_field(rm : r3d.RenderMaterial, field_name : str) -> Tuple[float, float, float, float]:
     """
     Get a color field from a rhino3dm.RenderMaterial
@@ -113,7 +128,8 @@ def get_color_field(rm : r3d.RenderMaterial, field_name : str) -> Tuple[float, f
     if not colstr:
         return _white
     coltup = tuple(float(f) for f in colstr.split(","))  # convert to tuple of floats
-    return coltup
+    return srgb_eotf(coltup)
+
 
 def get_float_field(rm : r3d.RenderMaterial, field_name : str) -> float:
     """
