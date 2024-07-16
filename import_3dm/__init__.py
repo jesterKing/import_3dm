@@ -33,6 +33,9 @@ bl_info = {
     "category": "Import-Export",
 }
 
+# with extentions bl_info is deleted, we keep a copy of the version
+bl_info_version = bl_info["version"][:]
+
 import bpy
 # ImportHelper is a helper class, defines filename and
 # invoke() function which calls the file selector.
@@ -150,7 +153,7 @@ class Import3dm(Operator, ImportHelper):
 
     def draw(self, _ : bpy.types.Context):
         layout = self.layout
-        layout.label(text="Import .3dm v{}.{}.{}".format(bl_info["version"][0], bl_info["version"][1], bl_info["version"][2]))
+        layout.label(text="Import .3dm v{}.{}.{}".format(bl_info_version[0], bl_info_version[1], bl_info_version[2]))
 
         box = layout.box()
         box.label(text="Visibility")
