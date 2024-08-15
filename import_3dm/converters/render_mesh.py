@@ -22,6 +22,7 @@
 
 import rhino3dm as r3d
 from . import utils
+import bpy
 import bmesh
 
 def import_render_mesh(context, ob, name, scale, options):
@@ -99,10 +100,13 @@ def import_render_mesh(context, ob, name, scale, options):
         bm = bmesh.new()
         bm.from_mesh(mesh)
 
-        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.0001)
+        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.001)
         bm.to_mesh(mesh)
         bm.free()
-        mesh.use_auto_smooth = True
+        if bpy.app.version >= (4, 1):
+            mesh.set_sharp_from_angle(angle=0.523599) # 30deg
+        else:
+            mesh.use_auto_smooth = True
     # done, now add object to blender
 
 
