@@ -67,7 +67,6 @@ def import_render_mesh(context, ob, name, scale, options):
         coords.extend([(m.TextureCoordinates[v].X, m.TextureCoordinates[v].Y) for v in range(len(m.TextureCoordinates))])
         vcls.extend((m.VertexColors[v][0], m.VertexColors[v][1], m.VertexColors[v][2], m.VertexColors[v][3]) for v in range(len(m.VertexColors)))
 
-    mesh = context.blend_data.meshes.new(name=name)
     tags = utils.create_tag_dict(oa.Id, oa.Name)
     mesh = utils.get_or_create_iddata(context.blend_data.meshes, tags, None)
     mesh.clear_geometry()
