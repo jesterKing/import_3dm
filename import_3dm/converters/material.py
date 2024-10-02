@@ -31,11 +31,15 @@ from . import rdk_manager
 from pathlib import Path, PureWindowsPath, PurePosixPath
 import base64
 import tempfile
+import uuid
 
 from typing import Any, Tuple
 
 ### default Rhino material name
 DEFAULT_RHINO_MATERIAL = "Rhino Default Material"
+DEFAULT_TEXT_MATERIAL = "Rhino Default Text"
+DEFAULT_RHINO_MATERIAL_ID = uuid.UUID("00000000-ABCD-EF01-2345-000000000000")
+DEFAULT_RHINO_TEXT_MATERIAL_ID = uuid.UUID("00000000-ABCD-EF01-6789-000000000000")
 
 #### material hashing functions
 
@@ -269,6 +273,14 @@ def plaster_material(rhino_material : r3d.RenderMaterial, blender_material : bpy
     col = get_color_field(rhino_material, "color")
     plaster.base_color = col
 
+def default_material(blender_material : bpy.types.Material):
+    plaster = PlasterWrapper(blender_material)
+    plaster.base_color = (0.9, 0.9, 0.9, 1.0)
+
+def default_text_material(blender_material : bpy.types.Material):
+    plaster = PlasterWrapper(blender_material)
+    plaster.base_color = (0.05, 0.05, 0.05, 1.0)
+
 def metal_material(rhino_material : r3d.RenderMaterial, blender_material : bpy.types.Material):
     metal = PrincipledBSDFWrapper(blender_material, is_readonly=False)
     col = get_color_field(rhino_material, "color")[0:3]
@@ -490,9 +502,19 @@ def handle_materials(context, model : r3d.File3dm, materials, update):
     """
     """
     handle_embedded_files(model)
-    rdk = rdk_manager.RdkManager(model)
-    rms = rdk.get_materials()
-    #for m in rms:
+
+    if DEFAULT_RHINO_MATERIAL not in materials:
+        tags = utils.create_tag_dict(DEFAULT_RHINO_MATERIAL_ID, DEFAULT_RHINO_MATERIAL)
+        blmat = utils.get_or_create_iddata(context.blend_data.materials, tags, None)
+        default_material(blmat)
+        materials[DEFAULT_RHINO_MATERIAL] = blmat
+
+    if DEFAULT_TEXT_MATERIAL not in materials:
+        tags = utils.create_tag_dict(DEFAULT_RHINO_TEXT_MATERIAL_ID, DEFAULT_TEXT_MATERIAL)
+        blmat = utils.get_or_create_iddata(context.blend_data.materials, tags, None)
+        default_text_material(blmat)
+        materials[DEFAULT_TEXT_MATERIAL] = blmat
+
     for mat in model.Materials:
         if not mat.PhysicallyBased:
             mat.ToPhysicallyBased()
