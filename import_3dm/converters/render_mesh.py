@@ -47,6 +47,7 @@ def import_render_mesh(context, ob, name, scale, options):
     faces = []
     vertices = []
     coords = []
+    vcls = []
 
     # now add all faces and vertices to the main lists
     for m in msh:
@@ -64,6 +65,7 @@ def import_render_mesh(context, ob, name, scale, options):
         fidx = fidx + len(m.Vertices)
         vertices.extend([(m.Vertices[v].X * scale, m.Vertices[v].Y * scale, m.Vertices[v].Z * scale) for v in range(len(m.Vertices))])
         coords.extend([(m.TextureCoordinates[v].X, m.TextureCoordinates[v].Y) for v in range(len(m.TextureCoordinates))])
+        vcls.extend((m.VertexColors[v][0], m.VertexColors[v][1], m.VertexColors[v][2], m.VertexColors[v][3]) for v in range(len(m.VertexColors)))
 
     mesh = context.blend_data.meshes.new(name=name)
     tags = utils.create_tag_dict(oa.Id, oa.Name)
@@ -94,6 +96,15 @@ def import_render_mesh(context, ob, name, scale, options):
             #in case there was a data mismatch, cleanup the created layer
             mesh.uv_layers.remove(mesh.uv_layers["RhinoUVMap"])
 
+    if len(vcls) == len(vertices):
+        mesh.attributes.new("RhinoColor", "FLOAT_COLOR", "POINT")
+        rcl = mesh.attributes["RhinoColor"]
+        for i in range(len(vcls)):
+            vcl = vcls[i]
+            rcl.data[i].color =  (vcl[0] / 255.0, vcl[1] / 255.0, vcl[2] / 255.0, vcl[3] / 255.0)
+
+        mesh.validate()
+        mesh.update()
 
 
     if needs_welding:
