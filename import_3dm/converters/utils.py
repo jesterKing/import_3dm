@@ -73,6 +73,42 @@ def create_tag_dict(
         'rhmat_from_object': mat_from_object
     }
 
+all_dict = dict()
+
+def clear_all_dict() -> None:
+    global all_dict
+    all_dict = dict()
+
+def reset_all_dict(context : bpy.types.Context) -> None:
+    global all_dict
+    all_dict = dict()
+    bases = [
+        context.blend_data.objects,
+        context.blend_data.cameras,
+        context.blend_data.lights,
+        context.blend_data.meshes,
+        context.blend_data.materials,
+        context.blend_data.collections,
+        context.blend_data.curves
+    ]
+    for base in bases:
+        t = type(base.bl_rna)
+        if t in all_dict:
+            dct = all_dict[t]
+        else:
+            dct = dict()
+            all_dict[t] = dct
+        for item in base:
+            rhid = item.get('rhid', None)
+            if rhid:
+                dct[rhid] = item
+
+def get_dict_for_base(base : bpy.types.bpy_prop_collection) -> Dict[str, bpy.types.ID]:
+    global all_dict
+    t = type(base.bl_rna)
+    if t not in all_dict:
+        pass
+    return all_dict[t]
 
 def get_or_create_iddata(
         base    : bpy.types.bpy_prop_collection,
@@ -95,26 +131,24 @@ def get_or_create_iddata(
     matid = tag_dict.get('rhmatid', None)
     parentid = tag_dict.get('rhparentid', None)
     is_idef = tag_dict.get('rhidef', False)
+    dct = get_dict_for_base(base)
     if guid is not None:
-        for item in base:
-            if item.get('rhid', None) == str(guid):
-                founditem = item
-                break
-    elif name:
-        for item in base:
-            if item.get('rhname', None) == name:
-                founditem = item
-                break
+        strguid = str(guid)
+        if strguid in dct:
+            founditem = dct[strguid]
     if founditem:
         theitem = founditem
         theitem['rhname'] = name
-        if obdata:
+        if obdata and type(theitem) != type(obdata):
             theitem.data = obdata
     else:
         if obdata:
             theitem = base.new(name=name, object_data=obdata)
         else:
             theitem = base.new(name=name)
+        if guid is not None:
+            strguid = str(guid)
+            dct[strguid] = theitem
         tag_data(theitem, tag_dict)
     return theitem
 

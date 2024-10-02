@@ -56,6 +56,13 @@ RHINO_TYPE_TO_IMPORT = {
 }
 
 
+def initialize(
+        context     : bpy.types.Context
+) -> None:
+    utils.reset_all_dict(context)
+
+def cleanup() -> None:
+    utils.clear_all_dict()
 
 # TODO: Decouple object data creation from object creation
 #       and consolidate object-level conversion.
@@ -74,6 +81,7 @@ def convert_object(
     collection given by layer
     """
 
+    update_materials = options.get("update_materials", False)
     data = None
     blender_object = None
 
@@ -125,7 +133,7 @@ def convert_object(
     for pair in ob.Geometry.GetUserStrings():
         blender_object[pair[0]] = pair[1]
 
-    if not ob.Attributes.IsInstanceDefinitionObject and ob.Geometry.ObjectType != r3d.ObjectType.InstanceReference:
+    if not ob.Attributes.IsInstanceDefinitionObject and ob.Geometry.ObjectType != r3d.ObjectType.InstanceReference and update_materials:
         if bpy.app.version>= (4, 1):
             override_context = context.copy()
             override_context["object"] = blender_object

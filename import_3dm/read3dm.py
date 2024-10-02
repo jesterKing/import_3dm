@@ -69,6 +69,8 @@ def read_3dm(
         options : Dict[str, Any]
     )   -> Set[str]:
 
+    converters.initialize(context)
+
     # Parse options
     import_views = options.get("import_views", False)
     import_named_views = options.get("import_named_views", False)
@@ -195,5 +197,7 @@ def read_3dm(
         bpy.ops.object.shade_smooth({'selected_editable_objects': toplayer.all_objects})
     except Exception:
         pass
+
+    converters.cleanup()
 
     return {'FINISHED'}
