@@ -92,7 +92,7 @@ def reset_all_dict(context : bpy.types.Context) -> None:
         context.blend_data.curves
     ]
     for base in bases:
-        t = type(base.bl_rna)
+        t = repr(base).split(',')[1]
         if t in all_dict:
             dct = all_dict[t]
         else:
@@ -105,7 +105,7 @@ def reset_all_dict(context : bpy.types.Context) -> None:
 
 def get_dict_for_base(base : bpy.types.bpy_prop_collection) -> Dict[str, bpy.types.ID]:
     global all_dict
-    t = type(base.bl_rna)
+    t = repr(base).split(',')[1]
     if t not in all_dict:
         pass
     return all_dict[t]
