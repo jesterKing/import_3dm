@@ -25,7 +25,7 @@ import rhino3dm as r3d
 from . import utils
 from . import curve
 
-from mathutils import Vector
+from mathutils import Matrix
 import math
 
 from enum import IntEnum, auto
@@ -122,7 +122,7 @@ def _populate_line(dimstyle : r3d.DimensionStyle, pt : PartType, plane : r3d.Pla
     line.points[1].co = (pt2.X, pt2.Y, pt2.Z, 1)
 
 
-def _add_text(dimstyle : r3d.DimensionStyle, plane : r3d.Plane, bc, pt : r3d.Point3d, txt : str, scale : float, left=False):
+def _add_text(dimstyle : r3d.DimensionStyle, plane : r3d.Plane, bc, pt : r3d.Point3d, txt : str, scale : float, left=False, textob=False):
     textcurve = bpy.context.blend_data.curves.new(name="annotation_text", type="FONT")
     textcurve.body = txt
     # for now only use blender built-in font. Scale that down to
@@ -131,9 +131,31 @@ def _add_text(dimstyle : r3d.DimensionStyle, plane : r3d.Plane, bc, pt : r3d.Poi
     textcurve.align_x = 'CENTER' if not left else 'LEFT'
     pt *= scale
     plane = r3d.Plane(pt, plane.XAxis, plane.YAxis)
-    xform = r3d.Transform.PlaneToPlane(r3d.Plane.WorldXY(), plane)
+    if not textob:
+        xform = r3d.Transform.PlaneToPlane(r3d.Plane.WorldXY(), plane)
+    else:
+        textcurve.align_x = 'CENTER'
+        textcurve.align_y = 'TOP'
+        plane = plane.Rotate(math.pi, plane.ZAxis)
+        trl = r3d.Transform.Translation(0.0, -0.05, 0.00)
+        xform = r3d.Transform.Multiply(trl, r3d.Transform.PlaneToPlane(r3d.Plane.WorldXY(), plane))
 
-    return (textcurve, utils.matrix_from_xform(xform))
+    bm = utils.matrix_from_xform(xform)
+
+    if textob:
+        # when adding a text annotation we need to verify that the tranform
+        # from XY plane to text plane has positive rotation value in the X of
+        # euler that represents the rotation for this transform.
+        # If it is negative add 180deg to both X and Z of the euler rotation.
+        (loc, rot, sca) = bm.decompose()
+        rote = rot.to_euler()
+        if rote.x < 0:
+            rote.x += math.pi
+            rote.z += math.pi
+            q = rote.to_quaternion()
+            bm = Matrix.LocRotScale(loc, q, sca)
+
+    return (textcurve, bm)
 
 
 def import_dim_linear(model, dimlin, bc, scale):
@@ -261,6 +283,15 @@ def import_leader(model, dimlead, bc, scale):
 
 CONVERT[r3d.AnnotationTypes.Leader] = import_leader
 
+
+def import_text(model, textannotation, bc, scale):
+    txt = textannotation.PlainText
+    dimstyle = model.DimStyles.FindId(textannotation.DimensionStyleId)
+    textpt = textannotation.Plane.Origin
+
+    return _add_text(dimstyle, textannotation.Plane, bc, textpt, txt, scale, left=False, textob=True)
+
+CONVERT[r3d.AnnotationTypes.Text] = import_text
 
 def import_ordinate(model, dimordinate, bc, scale):
     txt = dimordinate.PlainText
