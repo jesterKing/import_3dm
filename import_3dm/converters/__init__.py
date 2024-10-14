@@ -101,6 +101,7 @@ def convert_object(
 
     tags = utils.create_tag_dict(ob.Attributes.Id, ob.Attributes.Name)
     if data is not None:
+        data.materials.clear()
         data.materials.append(rhinomat)
         blender_object = utils.get_or_create_iddata(context.blend_data.objects, tags, data)
         if link_materials_to == "PREFERENCES":
