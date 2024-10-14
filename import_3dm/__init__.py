@@ -116,6 +116,15 @@ class Import3dm(Operator, ImportHelper):
         min=1,
     ) # type: ignore
 
+    link_materials_to : EnumProperty(
+        items=(("PREFERENCES", "Use Preferences", "Use the option defined in preferences."),
+               ("OBJECT", "Object", "Link material to object."),
+               ("DATA", "Object Data", "Link material to object data.")),
+        name="Link To",
+        description="Set how materials should be linked",
+        default="PREFERENCE",
+    )  # type: ignore
+
     update_materials: BoolProperty(
         name="Update Materials",
         description="Update existing materials. When unchecked create new materials if existing ones are found.",
@@ -135,6 +144,7 @@ class Import3dm(Operator, ImportHelper):
             "import_instances":self.import_instances,
             "import_instances_grid_layout":self.import_instances_grid_layout,
             "import_instances_grid":self.import_instances_grid,
+            "link_materials_to":self.link_materials_to,
         }
         return read_3dm(context, options)
 
@@ -168,6 +178,7 @@ class Import3dm(Operator, ImportHelper):
 
         box = layout.box()
         box.label(text="Materials")
+        box.prop(self, "link_materials_to")
         box.prop(self, "update_materials")
 
 # Only needed if you want to add into a dynamic menu
