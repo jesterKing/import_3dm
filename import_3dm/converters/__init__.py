@@ -82,6 +82,7 @@ def convert_object(
     """
 
     update_materials = options.get("update_materials", False)
+    link_materials_to = options.get("link_materials_to", "PREFERENCES")
     data = None
     blender_object = None
 
@@ -99,9 +100,14 @@ def convert_object(
     mat_from_object = ob.Attributes.MaterialSource == r3d.ObjectMaterialSource.MaterialFromObject
 
     tags = utils.create_tag_dict(ob.Attributes.Id, ob.Attributes.Name)
-    if data:
+    if data is not None:
         data.materials.append(rhinomat)
         blender_object = utils.get_or_create_iddata(context.blend_data.objects, tags, data)
+        if link_materials_to == "PREFERENCES":
+            link_materials_to = bpy.context.preferences.edit.material_link
+        for slot in blender_object.material_slots:
+            slot.link = link_materials_to
+
         if text_curve:
             text_tags = utils.create_tag_dict(uuid.uuid1(), f"TXT{ob.Attributes.Name}")
             text_curve[0].materials.append(rhinomat)
