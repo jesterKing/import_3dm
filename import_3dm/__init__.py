@@ -122,7 +122,7 @@ class Import3dm(Operator, ImportHelper):
                ("DATA", "Object Data", "Link material to object data.")),
         name="Link To",
         description="Set how materials should be linked",
-        default="PREFERENCE",
+        default="PREFERENCES",
     )  # type: ignore
 
     update_materials: BoolProperty(
