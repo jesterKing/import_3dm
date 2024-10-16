@@ -193,11 +193,12 @@ def read_3dm(
 
     # finally link in the container collection (top layer) into the main
     # scene collection.
-    try:
-        context.blend_data.scenes[0].collection.children.link(toplayer)
+    context.scene.collection.children.link(toplayer)
+    if bpy.app.version[0] < 4:
         bpy.ops.object.shade_smooth({'selected_editable_objects': toplayer.all_objects})
-    except Exception:
-        pass
+    else:
+        with context.temp_override(selected_editable_objects=toplayer.all_objects):
+            bpy.ops.object.shade_smooth()
 
     converters.cleanup()
 
