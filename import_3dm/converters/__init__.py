@@ -56,6 +56,13 @@ RHINO_TYPE_TO_IMPORT = {
 }
 
 
+def initialize(
+        context     : bpy.types.Context
+) -> None:
+    utils.reset_all_dict(context)
+
+def cleanup() -> None:
+    utils.clear_all_dict()
 
 # TODO: Decouple object data creation from object creation
 #       and consolidate object-level conversion.
@@ -74,6 +81,7 @@ def convert_object(
     collection given by layer
     """
 
+    update_materials = options.get("update_materials", False)
     data = None
     blender_object = None
 
@@ -96,11 +104,13 @@ def convert_object(
         blender_object = utils.get_or_create_iddata(context.blend_data.objects, tags, data)
         if text_curve:
             text_tags = utils.create_tag_dict(uuid.uuid1(), f"TXT{ob.Attributes.Name}")
+            text_curve[0].materials.append(rhinomat)
             text_object = utils.get_or_create_iddata(context.blend_data.objects, text_tags, text_curve[0])
+            text_object.material_slots[0].link = 'OBJECT'
+            text_object.material_slots[0].material = rhinomat
             text_object.parent = blender_object
-            texobpt = text_curve[1]
-            #text_object.location = (texobpt.X, texobpt.Y, texobpt.Z)
-            text_object.matrix_world = texobpt
+            texmatrix = text_curve[1]
+            text_object.matrix_world = texmatrix
     else:
         blender_object = context.blend_data.objects.new(name+"_Instance", None)
         utils.tag_data(blender_object, tags)
@@ -125,13 +135,7 @@ def convert_object(
     for pair in ob.Geometry.GetUserStrings():
         blender_object[pair[0]] = pair[1]
 
-    if not ob.Attributes.IsInstanceDefinitionObject and ob.Geometry.ObjectType != r3d.ObjectType.InstanceReference:
-        if bpy.app.version>= (4, 1):
-            override_context = context.copy()
-            override_context["object"] = blender_object
-            with context.temp_override(**override_context):
-                bpy.ops.object.material_slot_add()
-
+    if not ob.Attributes.IsInstanceDefinitionObject and ob.Geometry.ObjectType != r3d.ObjectType.InstanceReference and update_materials:
         blender_object.material_slots[0].link = 'OBJECT'
         blender_object.material_slots[0].material = rhinomat
 
