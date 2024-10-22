@@ -193,7 +193,8 @@ def read_3dm(
 
     # finally link in the container collection (top layer) into the main
     # scene collection.
-    context.scene.collection.children.link(toplayer)
+    if toplayer.name not in context.scene.collection.children:
+        context.scene.collection.children.link(toplayer)
     if bpy.app.version[0] < 4:
         bpy.ops.object.shade_smooth({'selected_editable_objects': toplayer.all_objects})
     else:
