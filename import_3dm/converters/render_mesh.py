@@ -70,7 +70,7 @@ def import_render_mesh(context, ob, name, scale, options):
     tags = utils.create_tag_dict(oa.Id, oa.Name)
     mesh = utils.get_or_create_iddata(context.blend_data.meshes, tags, None)
     mesh.clear_geometry()
-    mesh.from_pydata(vertices, [], faces)
+    mesh.from_pydata(vertices, [], faces, shade_flat=False)
 
 
     if mesh.loops and len(coords) == len(vertices):
