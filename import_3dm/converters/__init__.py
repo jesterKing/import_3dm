@@ -106,6 +106,8 @@ def convert_object(
         blender_object = utils.get_or_create_iddata(context.blend_data.objects, tags, data)
         if link_materials_to == "PREFERENCES":
             link_materials_to = bpy.context.preferences.edit.material_link
+            if link_materials_to == 'OBDATA':
+                link_materials_to = 'DATA'
         for slot in blender_object.material_slots:
             slot.link = link_materials_to
 
