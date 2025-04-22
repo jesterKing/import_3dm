@@ -73,6 +73,13 @@ def read_3dm(
 
     # Parse options
     import_views = options.get("import_views", False)
+    import_annotations = options.get("import_annotations", False)
+    import_curves = options.get("import_curves", False)
+    import_pointset = options.get("import_pointset", False)
+    import_meshes = options.get("import_meshes", False)
+    import_subd = options.get("import_subd", False)
+    import_extrusions = options.get("import_extrusions", False)
+    import_brep = options.get("import_brep", False)
     import_named_views = options.get("import_named_views", False)
     import_hidden_objects = options.get("import_hidden_objects", False)
     import_hidden_layers = options.get("import_hidden_layers", False)
@@ -129,6 +136,22 @@ def read_3dm(
         if og.ObjectType not in converters.RHINO_TYPE_TO_IMPORT and og.ObjectType != r3d.ObjectType.InstanceReference:
             print("Unsupported object type: {}".format(og.ObjectType))
             continue
+
+        if not import_curves and og.ObjectType == r3d.ObjectType.Curve:
+            continue
+        if not import_annotations and og.ObjectType == r3d.ObjectType.Annotation:
+            continue
+        if not import_pointset and og.ObjectType == r3d.ObjectType.PointSet:
+            continue
+        if not import_brep and og.ObjectType == r3d.ObjectType.Brep:
+            continue
+        if not import_extrusions and og.ObjectType == r3d.ObjectType.Extrusion:
+            continue
+        if not import_subd and og.ObjectType == r3d.ObjectType.SubD:
+            continue
+        if not import_meshes and og.ObjectType == r3d.ObjectType.Mesh:
+            continue
+
 
         # Check object visibility
         attr = ob.Attributes

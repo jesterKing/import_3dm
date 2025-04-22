@@ -148,7 +148,6 @@ CONVERT[r3d.PolyCurve] = import_polycurve
 
 def import_curve(context, ob, name, scale, options):
     og = ob.Geometry
-    oa = ob.Attributes
 
     curve_data = context.blend_data.curves.new(name, type="CURVE")
 

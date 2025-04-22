@@ -76,6 +76,48 @@ class Import3dm(Operator, ImportHelper):
         default=True,
     ) # type: ignore
 
+    import_annotations: BoolProperty(
+        name="Annotations",
+        description="Import annotations.",
+        default=True,
+    ) # type: ignore
+
+    import_curves: BoolProperty(
+        name="Curves",
+        description="Import curves.",
+        default=True,
+    ) # type: ignore
+
+    import_meshes: BoolProperty(
+        name="Meshes",
+        description="Import meshes.",
+        default=True,
+    ) # type: ignore
+
+    import_subd: BoolProperty(
+        name="SubD",
+        description="Import SubDs.",
+        default=True,
+    ) # type: ignore
+
+    import_extrusions: BoolProperty(
+        name="Extrusions",
+        description="Import extrusions.",
+        default=True,
+    ) # type: ignore
+
+    import_brep: BoolProperty(
+        name="BRep",
+        description="Import B-Reps.",
+        default=True,
+    ) # type: ignore
+
+    import_pointset: BoolProperty(
+        name="PointSet",
+        description="Import PointSets.",
+        default=True,
+    ) # type: ignore
+
     import_views: BoolProperty(
         name="Standard",
         description="Import standard views (Top, Front, Right, Perspective) as cameras.",
@@ -139,6 +181,13 @@ class Import3dm(Operator, ImportHelper):
             "filepath":self.filepath,
             "import_views":self.import_views,
             "import_named_views":self.import_named_views,
+            "import_annotations":self.import_annotations,
+            "import_curves":self.import_curves,
+            "import_meshes":self.import_meshes,
+            "import_subd":self.import_subd,
+            "import_extrusions":self.import_extrusions,
+            "import_brep":self.import_brep,
+            "import_pointset":self.import_pointset,
             "update_materials":self.update_materials,
             "import_hidden_objects":self.import_hidden_objects,
             "import_hidden_layers":self.import_hidden_layers,
@@ -154,6 +203,16 @@ class Import3dm(Operator, ImportHelper):
     def draw(self, _ : bpy.types.Context):
         layout = self.layout
         layout.label(text="Import .3dm v{}.{}.{}".format(bl_info_version[0], bl_info_version[1], bl_info_version[2]))
+
+        box = layout.box()
+        box.label(text="Objects")
+        box.prop(self, "import_brep")
+        box.prop(self, "import_extrusions")
+        box.prop(self, "import_subd")
+        box.prop(self, "import_meshes")
+        box.prop(self, "import_curves")
+        box.prop(self, "import_annotations")
+        box.prop(self, "import_poinset")
 
         box = layout.box()
         box.label(text="Visibility")
