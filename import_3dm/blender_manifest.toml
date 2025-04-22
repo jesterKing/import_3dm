@@ -3,7 +3,7 @@ schema_version = "1.0.0"
 # Example of manifest file for a Blender extension
 # Change the values according to your extension
 id = "import_3dm"
-version = "0.0.15"
+version = "0.0.16"
 name = "Import Rhinoceros 3D"
 tagline = "Import Rhinoceros 3dm files in Blender"
 maintainer = "Nathan 'jesterKing' Letwory"
@@ -47,9 +47,9 @@ platforms = ["windows-x64", "macos-arm64", "linux-x86_64"]
 # Optional: bundle 3rd party Python modules.
 # https://docs.blender.org/manual/en/dev/extensions/python_wheels.html
 wheels = [
-  "./wheels/rhino3dm-8.9.0b0-cp311-cp311-macosx_12_0_universal2.whl",
-  "./wheels/rhino3dm-8.9.0b0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
-  "./wheels/rhino3dm-8.9.0b0-cp311-cp311-win_amd64.whl",
+  "./wheels/rhino3dm-8.17.0-cp311-cp311-macosx_13_0_universal2.whl",
+  "./wheels/rhino3dm-8.17.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+  "./wheels/rhino3dm-8.17.0-cp311-cp311-win_amd64.whl",
 ]
 
 # Optional: build setting.
