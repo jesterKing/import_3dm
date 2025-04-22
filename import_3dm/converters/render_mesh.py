@@ -32,7 +32,7 @@ def import_render_mesh(context, ob, name, scale, options):
     og = ob.Geometry
     oa = ob.Attributes
 
-    needs_welding = False
+    needs_welding = True
 
     if og.ObjectType == r3d.ObjectType.Extrusion:
         msh = [og.GetMesh(r3d.MeshType.Any)]
@@ -40,7 +40,6 @@ def import_render_mesh(context, ob, name, scale, options):
         msh = [og]
     elif og.ObjectType == r3d.ObjectType.SubD:
         msh = [r3d.Mesh.CreateFromSubDControlNet(og, True)]
-        needs_welding = True
     elif og.ObjectType == r3d.ObjectType.Brep:
         msh = [og.Faces[f].GetMesh(r3d.MeshType.Any) for f in range(len(og.Faces)) if type(og.Faces[f])!=list]
     fidx = 0
@@ -105,11 +104,9 @@ def import_render_mesh(context, ob, name, scale, options):
         mesh.validate()
         mesh.update()
 
-
     if needs_welding:
         bm = bmesh.new()
         bm.from_mesh(mesh)
-
         bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.001)
         bm.to_mesh(mesh)
         bm.free()
@@ -117,7 +114,6 @@ def import_render_mesh(context, ob, name, scale, options):
             mesh.set_sharp_from_angle(angle=0.523599) # 30deg
         else:
             mesh.use_auto_smooth = True
+
     # done, now add object to blender
-
-
     return mesh
