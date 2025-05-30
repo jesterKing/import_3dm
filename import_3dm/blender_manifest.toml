@@ -41,7 +41,7 @@ license = [
 # ]
 
 # Optional list of supported platforms. If omitted, the extension will be available in all operating systems.
-platforms = ["windows-x64", "macos-arm64", "linux-x86_64"]
+platforms = ["windows-x64", "macos-arm64", "linux-x64"]
 # Other supported platforms: "windows-arm64", "macos-x86_64"
 
 # Optional: bundle 3rd party Python modules.
