@@ -20,10 +20,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import bpy
 import rhino3dm as r3d
 from . import utils
 import bpy
 import bmesh
+
+import traceback
+
 
 def import_render_mesh(context, ob, name, scale, options):
     # concatenate all meshes from all (brep) faces,
@@ -34,12 +38,15 @@ def import_render_mesh(context, ob, name, scale, options):
 
     needs_welding = True
 
+    msh_tex = list()
     if og.ObjectType == r3d.ObjectType.Extrusion:
         msh = [og.GetMesh(r3d.MeshType.Any)]
     elif og.ObjectType == r3d.ObjectType.Mesh:
         msh = [og]
     elif og.ObjectType == r3d.ObjectType.SubD:
-        msh = [r3d.Mesh.CreateFromSubDControlNet(og, True)]
+        msh = [r3d.Mesh.CreateFromSubDControlNet(og, False)]
+        msh_tex = [r3d.Mesh.CreateFromSubDControlNet(og, True)]
+        # needs_welding = True
     elif og.ObjectType == r3d.ObjectType.Brep:
         msh = [og.Faces[f].GetMesh(r3d.MeshType.Any) for f in range(len(og.Faces)) if type(og.Faces[f])!=list]
     fidx = 0
@@ -71,8 +78,13 @@ def import_render_mesh(context, ob, name, scale, options):
     mesh.clear_geometry()
     mesh.from_pydata(vertices, [], faces, shade_flat=False)
 
+    coords_tex = list()
+    for mt in msh_tex:
+        if not mt:
+            continue
+        coords_tex.extend([(mt.TextureCoordinates[v].X, mt.TextureCoordinates[v].Y) for v in range(len(mt.TextureCoordinates))])
 
-    if mesh.loops and len(coords) == len(vertices):
+    if mesh.loops:  # and len(coords) == len(vertices):
         # todo:
         # * check for multiple mappings and handle them
         # * get mapping name (missing from rhino3dm)
@@ -84,8 +96,18 @@ def import_render_mesh(context, ob, name, scale, options):
         if sum(len(x) for x in faces) == len(mesh.uv_layers["RhinoUVMap"].data):
             uvl = mesh.uv_layers["RhinoUVMap"].data[:]
 
-            for l in mesh.loops:
-                uvl[l.index].uv = coords[l.vertex_index]
+            for loop in mesh.loops:
+                try:
+                    if coords_tex:
+                        uvl[loop.index].uv = coords_tex[loop.index]
+                    elif coords:
+                        # print(loop.index, loop.vertex_index, len(uvl), len(coords))
+                        uvl[loop.index].uv = coords[loop.vertex_index]
+                    else:
+                        print("no tex coords")
+                except Exception:  # TODO: narrow down error type, you lazy bastard ;)
+                    print(name)
+                    print(traceback.format_exc())
 
             mesh.validate()
             mesh.update()
