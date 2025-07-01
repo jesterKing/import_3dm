@@ -212,7 +212,7 @@ class Import3dm(Operator, ImportHelper):
         box.prop(self, "import_meshes")
         box.prop(self, "import_curves")
         box.prop(self, "import_annotations")
-        box.prop(self, "import_poinset")
+        box.prop(self, "import_pointset")
 
         box = layout.box()
         box.label(text="Visibility")
