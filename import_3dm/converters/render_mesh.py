@@ -46,7 +46,6 @@ def import_render_mesh(context, ob, name, scale, options):
     elif og.ObjectType == r3d.ObjectType.SubD:
         msh = [r3d.Mesh.CreateFromSubDControlNet(og, False)]
         msh_tex = [r3d.Mesh.CreateFromSubDControlNet(og, True)]
-        # needs_welding = True
     elif og.ObjectType == r3d.ObjectType.Brep:
         msh = [og.Faces[f].GetMesh(r3d.MeshType.Any) for f in range(len(og.Faces)) if type(og.Faces[f])!=list]
     fidx = 0
