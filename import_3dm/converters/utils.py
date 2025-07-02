@@ -113,7 +113,8 @@ def get_dict_for_base(base : bpy.types.bpy_prop_collection) -> Dict[str, bpy.typ
 def get_or_create_iddata(
         base    : bpy.types.bpy_prop_collection,
         tag_dict: Dict[str, Any],
-        obdata : bpy.types.ID
+        obdata : bpy.types.ID,
+        use_none : bool = False
     )   -> bpy.types.ID:
     """
     Get an iddata.
@@ -142,7 +143,7 @@ def get_or_create_iddata(
         if obdata and type(theitem) != type(obdata):
             theitem.data = obdata
     else:
-        if obdata:
+        if obdata or use_none:
             theitem = base.new(name=name, object_data=obdata)
         else:
             theitem = base.new(name=name)

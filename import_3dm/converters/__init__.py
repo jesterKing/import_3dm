@@ -151,8 +151,18 @@ def convert_object(
     #instance definition objects are linked within their definition collections
     if not ob.Attributes.IsInstanceDefinitionObject:
         try:
-            layer.objects.link(blender_object)
-            if text_object:
-                layer.objects.link(text_object)
+            if options.get("import_layers_as_empties", False):
+                blender_object.parent = layer
+                if text_object is not None:
+                    text_object.parent = layer
+                # also link object to same collections as parent
+                for col in layer.users_collection:
+                    col.objects.link(blender_object)
+                    if text_object is not None:
+                        col.objects.link(text_object)
+            else:
+                layer.objects.link(blender_object)
+                if text_object is not None:
+                    layer.objects.link(text_object)
         except Exception:
             pass

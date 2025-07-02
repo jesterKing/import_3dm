@@ -24,6 +24,7 @@ import rhino3dm as r3d
 from . import utils
 import bpy
 import bmesh
+import bpy.app
 
 def import_render_mesh(context, ob, name, scale, options):
     # concatenate all meshes from all (brep) faces,
