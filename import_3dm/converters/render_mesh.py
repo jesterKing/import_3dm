@@ -25,6 +25,7 @@ import rhino3dm as r3d
 from . import utils
 import bpy
 import bmesh
+import bpy.app
 
 import traceback
 

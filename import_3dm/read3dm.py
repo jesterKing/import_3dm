@@ -83,6 +83,7 @@ def read_3dm(
     import_named_views = options.get("import_named_views", False)
     import_hidden_objects = options.get("import_hidden_objects", False)
     import_hidden_layers = options.get("import_hidden_layers", False)
+    import_layers_as_empties = options.get("import_layers_as_empties", False)
     import_groups = options.get("import_groups", False)
     import_nested_groups = options.get("import_nested_groups", False)
     import_instances = options.get("import_instances",False)
@@ -121,7 +122,8 @@ def read_3dm(
     converters.handle_materials(context, model, materials, update_materials)
 
     # Handle layers
-    converters.handle_layers(context, model, toplayer, layerids, materials, update_materials, import_hidden_layers)
+    converters.handle_layers(context, model, toplayer, layerids, materials, update_materials, import_hidden_layers, import_layers_as_empties)
+    materials[converters.DEFAULT_RHINO_MATERIAL] = None
 
     #build skeletal hierarchy of instance definitions as collections (will be populated by object importer)
     if import_instances:

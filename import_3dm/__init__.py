@@ -76,6 +76,12 @@ class Import3dm(Operator, ImportHelper):
         default=True,
     ) # type: ignore
 
+    import_layers_as_empties: BoolProperty(
+        name="Layers as Empties",
+        description="Import iayers as empties instead of groups.",
+        default=True,
+    ) # type: ignore
+
     import_annotations: BoolProperty(
         name="Annotations",
         description="Import annotations.",
@@ -215,6 +221,7 @@ class Import3dm(Operator, ImportHelper):
             "update_materials":self.update_materials,
             "import_hidden_objects":self.import_hidden_objects,
             "import_hidden_layers":self.import_hidden_layers,
+            "import_layers_as_empties": self.import_layers_as_empties,
             "import_groups":self.import_groups,
             "import_nested_groups":self.import_nested_groups,
             "import_instances":self.import_instances,
@@ -245,6 +252,11 @@ class Import3dm(Operator, ImportHelper):
         box.label(text="Visibility")
         box.prop(self, "import_hidden_objects")
         box.prop(self, "import_hidden_layers")
+
+        box = layout.box()
+        box.label(text="Layers")
+        row = box.row()
+        row.prop(self, "import_layers_as_empties")
 
         box = layout.box()
         box.label(text="Views")

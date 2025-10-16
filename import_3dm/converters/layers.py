@@ -23,7 +23,7 @@
 from . import utils
 
 
-def handle_layers(context, model, toplayer, layerids, materials, update, import_hidden=False):
+def handle_layers(context, model, toplayer, layerids, materials, update, import_hidden=False, layers_as_empties=False):
     """
     In context read the Rhino layers from model
     then update the layerids dictionary passed in.
@@ -49,7 +49,10 @@ def handle_layers(context, model, toplayer, layerids, materials, update, import_
         if not l.Visible and not import_hidden:
             continue
         tags = utils.create_tag_dict(l.Id, l.Name)
-        lcol = utils.get_or_create_iddata(context.blend_data.collections, tags, None)
+        if layers_as_empties:
+            lcol = utils.get_or_create_iddata(context.blend_data.objects, tags, None, use_none=True)
+        else:
+            lcol = utils.get_or_create_iddata(context.blend_data.collections, tags, None)
         layerids[str(l.Id)] = (lid, lcol)
         #utils.tag_data(layerids[str(l.Id)][1], l.Id, l.Name)
 
@@ -59,12 +62,22 @@ def handle_layers(context, model, toplayer, layerids, materials, update, import_
         if str(l.ParentLayerId) in layerids:
             parentlayer = layerids[str(l.ParentLayerId)][1]
             try:
-                parentlayer.children.link(layerids[str(l.Id)][1])
+                if layers_as_empties:
+                    # set the parent
+                    child = layerids[str(l.Id)][1]
+                    child.parent = parentlayer
+                    # and also link to Layers collection
+                    layer_col.objects.link(child)
+                else:
+                    parentlayer.children.link(layerids[str(l.Id)][1])
             except Exception:
                 pass
         # or to the top collection if no parent layer was found
         else:
             try:
-                layer_col.children.link(layerids[str(l.Id)][1])
+                if layers_as_empties:
+                    layer_col.objects.link(layerids[str(l.Id)][1])
+                else:
+                    layer_col.children.link(layerids[str(l.Id)][1])
             except Exception:
                 pass
