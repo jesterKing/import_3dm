@@ -32,6 +32,7 @@ from pathlib import Path, PureWindowsPath, PurePosixPath
 import base64
 import tempfile
 import uuid
+import os
 
 from typing import Any, Tuple
 
@@ -466,8 +467,9 @@ def handle_embedded_files(model : r3d.File3dm):
 
         tmpfpath = tmpf.name
         try:
-            tmpfpath.unlink()
-        except:
+            tmpf.close()
+            os.unlink(tmpfpath)
+        except RuntimeError:
             pass
 
 
