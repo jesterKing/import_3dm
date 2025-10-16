@@ -39,7 +39,7 @@ bl_info_version = bl_info["version"][:]
 import bpy
 # ImportHelper is a helper class, defines filename and
 # invoke() function which calls the file selector.
-from bpy_extras.io_utils import ImportHelper
+from bpy_extras.io_utils import ImportHelper, poll_file_object_drop
 from bpy.props import FloatProperty, StringProperty, BoolProperty, EnumProperty, IntProperty
 from bpy.types import Operator
 
@@ -226,34 +226,9 @@ class Import3dm(Operator, ImportHelper):
         return context.mode == "OBJECT"
 
     def execute(self, context : bpy.types.Context):
-        options : Dict[str, Any] = {
-            "filepath":self.filepath,
-            "import_views":self.import_views,
-            "import_named_views":self.import_named_views,
-            "import_annotations":self.import_annotations,
-            "import_curves":self.import_curves,
-            "import_meshes":self.import_meshes,
-            "import_subd":self.import_subd,
-            "import_extrusions":self.import_extrusions,
-            "import_brep":self.import_brep,
-            "import_pointset":self.import_pointset,
-            "update_materials":self.update_materials,
-            "import_hidden_objects":self.import_hidden_objects,
-            "import_hidden_layers":self.import_hidden_layers,
-            "import_layers_as_empties": self.import_layers_as_empties,
-            "import_groups":self.import_groups,
-            "import_nested_groups":self.import_nested_groups,
-            "import_instances":self.import_instances,
-            "import_instances_grid_layout":self.import_instances_grid_layout,
-            "import_instances_grid":self.import_instances_grid,
-            "link_materials_to":self.link_materials_to,
-            "subD_level_viewport":self.subD_level_viewport,
-            "subD_level_render":self.subD_level_render,
-            "subD_boundary_smooth":self.subD_boundary_smooth,
-            "merge_by_distance":self.merge_by_distance,
-            "merge_distance":self.merge_distance,
-        }
-        return read_3dm(context, options)
+        options = self.as_keywords()
+        # Single file import
+        return read_3dm(context, self.filepath, options)
 
     def draw(self, _ : bpy.types.Context):
         layout = self.layout
@@ -317,6 +292,24 @@ class Import3dm(Operator, ImportHelper):
         col = box.column()
         col.enabled = self.merge_by_distance
         col.prop(self, "merge_distance")
+    
+    def invoke(self, context, event):
+        self.files = []
+        return ImportHelper.invoke_popup(self, context)
+
+
+class IO_FH_3dm_import(bpy.types.FileHandler):
+    bl_idname = "IO_FH_3dm_import"
+    bl_label = "File handler for Rhinoceros 3D file import"
+    bl_import_operator = "import_3dm.some_data"
+    bl_file_extensions = ".3dm"
+
+    @classmethod
+    def poll_drop(cls, context):
+        return poll_file_object_drop(context)
+
+
+
 
 # Only needed if you want to add into a dynamic menu
 def menu_func_import(self, _ : bpy.types.Context):
@@ -325,11 +318,13 @@ def menu_func_import(self, _ : bpy.types.Context):
 
 def register():
     bpy.utils.register_class(Import3dm)
+    bpy.utils.register_class(IO_FH_3dm_import)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
 
 
 def unregister():
     bpy.utils.unregister_class(Import3dm)
+    bpy.utils.unregister_class(IO_FH_3dm_import)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
 
 

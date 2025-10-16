@@ -66,6 +66,7 @@ def create_or_get_top_layer(context, filepath):
 
 def read_3dm(
         context : bpy.types.Context,
+        filepath : str,
         options : Dict[str, Any]
     )   -> Set[str]:
 
@@ -89,7 +90,6 @@ def read_3dm(
     import_instances = options.get("import_instances",False)
     update_materials = options.get("update_materials", False)
 
-    filepath : str = options.get("filepath", "")
     model = None
 
     try:
