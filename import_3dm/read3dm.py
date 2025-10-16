@@ -223,8 +223,12 @@ def read_3dm(
     if bpy.app.version[0] < 4:
         bpy.ops.object.shade_smooth({'selected_editable_objects': toplayer.all_objects})
     else:
+        # set the active object on the viewlayer to none as that is checked by shade smooth
+        active_object = bpy.context.view_layer.objects.active
+        bpy.context.view_layer.objects.active = None
         with context.temp_override(selected_editable_objects=toplayer.all_objects):
             bpy.ops.object.shade_smooth()
+        bpy.context.view_layer.objects.active = active_object
 
     converters.cleanup()
 
