@@ -176,6 +176,30 @@ class Import3dm(Operator, ImportHelper):
         default=True,
     ) # type: ignore
 
+    subD_level_viewport: IntProperty(
+        name="SubD Levels Viewport",
+        description="Number of subdivisions to perform in the 3D viewport.",
+        default=2,
+        min=0,
+        max=6,
+    ) # type: ignore
+
+    subD_level_render: IntProperty(
+        name="SubD Levels Render",
+        description="Number of subdivisions to perform when rendering.",
+        default=2,
+        min=0,
+        max=6,
+    ) # type: ignore
+
+    subD_boundary_smooth: EnumProperty(
+        items=(("ALL", "All", "Smooth boundaries, including corners"),
+               ("PRESERVE_CORNERS", "Keep Corners", "Smooth boundaries, but corners are kept sharp"),),
+        name="SubD Boundary Smooth",
+        description="Controls how open boundaries are smoothed",
+        default="ALL",
+    ) # type: ignore
+
     def execute(self, context : bpy.types.Context):
         options : Dict[str, Any] = {
             "filepath":self.filepath,
@@ -197,6 +221,9 @@ class Import3dm(Operator, ImportHelper):
             "import_instances_grid_layout":self.import_instances_grid_layout,
             "import_instances_grid":self.import_instances_grid,
             "link_materials_to":self.link_materials_to,
+            "subD_level_viewport":self.subD_level_viewport,
+            "subD_level_render":self.subD_level_render,
+            "subD_boundary_smooth":self.subD_boundary_smooth,
         }
         return read_3dm(context, options)
 
@@ -242,6 +269,12 @@ class Import3dm(Operator, ImportHelper):
         box.label(text="Materials")
         box.prop(self, "link_materials_to")
         box.prop(self, "update_materials")
+
+        box = layout.box()
+        box.label(text="SubD")
+        box.prop(self, "subD_level_viewport")
+        box.prop(self, "subD_level_render")
+        box.prop(self, "subD_boundary_smooth")
 
 # Only needed if you want to add into a dynamic menu
 def menu_func_import(self, _ : bpy.types.Context):

@@ -132,10 +132,10 @@ def convert_object(
     # If subd, apply subdivision modifier
     if ob.Geometry.ObjectType == r3d.ObjectType.SubD:
         if blender_object.modifiers.find("SubD") == -1:
-            level = 3
             blender_object.modifiers.new(type="SUBSURF", name="SubD")
-            blender_object.modifiers["SubD"].levels = level
-            blender_object.modifiers["SubD"].render_levels = level
+            blender_object.modifiers["SubD"].levels = options.get("subD_level_viewport", 2)
+            blender_object.modifiers["SubD"].render_levels = options.get("subD_level_render", 2)
+            blender_object.modifiers["SubD"].boundary_smooth = options.get("subD_boundary_smooth", "ALL")
 
     # Import Rhino user strings
     for pair in ob.Attributes.GetUserStrings():
