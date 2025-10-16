@@ -206,6 +206,10 @@ class Import3dm(Operator, ImportHelper):
         default="ALL",
     ) # type: ignore
 
+    @classmethod
+    def poll(cls, context: bpy.types.Context):
+        return context.mode == "OBJECT"
+
     def execute(self, context : bpy.types.Context):
         options : Dict[str, Any] = {
             "filepath":self.filepath,
