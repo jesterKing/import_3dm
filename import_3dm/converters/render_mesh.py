@@ -37,7 +37,7 @@ def import_render_mesh(context, ob, name, scale, options):
     og = ob.Geometry
     oa = ob.Attributes
 
-    needs_welding = True
+    needs_welding = options.get("merge_by_distance", False)
 
     msh_tex = list()
     if og.ObjectType == r3d.ObjectType.Extrusion:
@@ -129,7 +129,8 @@ def import_render_mesh(context, ob, name, scale, options):
     if needs_welding:
         bm = bmesh.new()
         bm.from_mesh(mesh)
-        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.001)
+        merge_distance = options.get("merge_distance", 0.0001)
+        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=merge_distance)
         bm.to_mesh(mesh)
         bm.free()
         if bpy.app.version >= (4, 1):
