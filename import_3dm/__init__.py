@@ -40,7 +40,7 @@ import bpy
 # ImportHelper is a helper class, defines filename and
 # invoke() function which calls the file selector.
 from bpy_extras.io_utils import ImportHelper
-from bpy.props import StringProperty, BoolProperty, EnumProperty, IntProperty
+from bpy.props import FloatProperty, StringProperty, BoolProperty, EnumProperty, IntProperty
 from bpy.types import Operator
 
 from typing import Any, Dict
@@ -52,6 +52,7 @@ class Import3dm(Operator, ImportHelper):
     """Import Rhinoceros 3D files (.3dm). Currently does render meshes only, more geometry and data to follow soon."""
     bl_idname = "import_3dm.some_data"  # important since its how bpy.ops.import_3dm.some_data is constructed
     bl_label = "Import Rhinoceros 3D file"
+    bl_options = {"REGISTER", "UNDO"}
 
     # ImportHelper mixin class uses this
     filename_ext = ".3dm"
@@ -182,6 +183,20 @@ class Import3dm(Operator, ImportHelper):
         default=True,
     ) # type: ignore
 
+    merge_by_distance: BoolProperty(
+        name="Merge Vertices By Distance",
+        description="Merge vertices based on their proximity.",
+        default=False,
+    ) # type: ignore
+
+    merge_distance: FloatProperty(
+        name="Merge Distance",
+        description="Maximinum distance between elements to merge.",
+        default=0.0001,
+        min=0.0,
+        subtype="DISTANCE"
+    ) # type: ignore
+
     subD_level_viewport: IntProperty(
         name="SubD Levels Viewport",
         description="Number of subdivisions to perform in the 3D viewport.",
@@ -231,6 +246,8 @@ class Import3dm(Operator, ImportHelper):
             "subD_level_viewport":self.subD_level_viewport,
             "subD_level_render":self.subD_level_render,
             "subD_boundary_smooth":self.subD_boundary_smooth,
+            "merge_by_distance":self.merge_by_distance,
+            "merge_distance":self.merge_distance,
         }
         return read_3dm(context, options)
 
@@ -283,10 +300,14 @@ class Import3dm(Operator, ImportHelper):
         box.prop(self, "update_materials")
 
         box = layout.box()
-        box.label(text="SubD")
+        box.label(text="Meshes & SubD")
         box.prop(self, "subD_level_viewport")
         box.prop(self, "subD_level_render")
         box.prop(self, "subD_boundary_smooth")
+        box.prop(self, "merge_by_distance")
+        col = box.column()
+        col.enabled = self.merge_by_distance
+        col.prop(self, "merge_distance")
 
 # Only needed if you want to add into a dynamic menu
 def menu_func_import(self, _ : bpy.types.Context):
