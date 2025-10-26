@@ -35,7 +35,6 @@ def modules_path():
     modulespath = os.path.normpath(
         os.path.join(
             bpy.utils.script_path_user(),
-            "addons",
             "modules"
         )
     )
@@ -48,12 +47,18 @@ def modules_path():
 
     return modulespath
 
-modules_path()
+target_path = modules_path()
 
-
-import rhino3dm as r3d
+try:
+    import rhino3dm as r3d
+except ImportError:
+    import subprocess
+    print('Attempting to install dependencies to {}'.format(target_path))
+    env = os.environ.copy()
+    for dep_name in ("rhino3dm",):
+        res = subprocess.run( [sys.executable, "-m", "pip", "install", "--target", target_path, dep_name], env=env)
+    import rhino3dm as r3d
 from . import converters
-
 
 def create_or_get_top_layer(context, filepath):
     top_collection_name = Path(filepath).stem
