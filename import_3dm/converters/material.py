@@ -208,42 +208,17 @@ class PlasterWrapper(ShaderWrapper):
         nodes = tree.nodes
         links = tree.links
 
-        node_out = None
-        node_diffuse_bsdf = None
-        for n in nodes:
-            if n.bl_idname == 'ShaderNodeOutputMaterial' and n.inputs[0].is_linked:
-                node_out = n
-                node_diffuse_bsdf = n.inputs[0].links[0].from_node
-            elif n.bl_idname == 'ShaderNodeBsdfDiffuse' and n.outputs[0].is_linked:
-                node_diffuse_bsdf = n
-                for lnk in n.outputs[0].links:
-                    node_out = lnk.to_node
-                    if node_out.bl_idname == 'ShaderNodeOutputMaterial':
-                        break
-            if (
-                node_out is not None and node_diffuse_bsdf is not None and
-                node_out.bl_idname == 'ShaderNodeOutputMaterial' and
-                node_diffuse_bsdf.bl_idname == 'ShaderNodeBsdfDiffuse'
-            ):
-                break
-            node_out = node_diffuse_bsdf = None
+        nodes.clear()
 
-        if node_out is not None:
-            self._grid_to_location(0, 0, ref_node=node_out)
-        else:
-            node_out = nodes.new('ShaderNodeOutputMaterial')
-            node_out.label = "Material Out"
-            node_out.target = 'ALL'
-            self._grid_to_location(1, 1, ref_node=node_out)
+        node_out = nodes.new('ShaderNodeOutputMaterial')
+        node_out.label = "Material Output"
+        self._grid_to_location(1, 1, ref_node=node_out)
         self.node_out = node_out
 
-        if node_diffuse_bsdf is not None:
-            self._grid_to_location(0, 0, ref_node=node_diffuse_bsdf)
-        else:
-            node_diffuse_bsdf = nodes.new('ShaderNodeBsdfDiffuse')
-            node_diffuse_bsdf.label = "Diffuse BSDF"
-            self._grid_to_location(0, 1, ref_node=node_diffuse_bsdf)
-            links.new(node_diffuse_bsdf.outputs["BSDF"], self.node_out.inputs["Surface"])
+        node_diffuse_bsdf = nodes.new('ShaderNodeBsdfDiffuse')
+        node_diffuse_bsdf.label = "Diffuse BSDF"
+        self._grid_to_location(0, 1, ref_node=node_diffuse_bsdf)
+        links.new(node_diffuse_bsdf.outputs["BSDF"], self.node_out.inputs["Surface"])
         self.node_diffuse_bsdf = node_diffuse_bsdf
 
     def base_color_get(self):
