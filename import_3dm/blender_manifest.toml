@@ -25,7 +25,7 @@ type = "add-on"
 # https://docs.blender.org/manual/en/dev/advanced/extensions/tags.html
 tags = ["Import-Export",]
 
-blender_version_min = "5.0.0"
+blender_version_min = "4.2.0"
 # Optional: maximum supported Blender version
 # blender_version_max = "5.1.0"
 
@@ -41,7 +41,7 @@ license = [
 # ]
 
 # Optional list of supported platforms. If omitted, the extension will be available in all operating systems.
-platforms = ["windows-x64", "macos-arm64", "linux-x86_64"]
+platforms = ["windows-x64", "macos-arm64", "linux-x64", "linux-arm64"]
 # Other supported platforms: "windows-arm64", "macos-x86_64"
 
 # Optional: bundle 3rd party Python modules.
@@ -50,6 +50,8 @@ wheels = [
   "./wheels/rhino3dm-8.17.0-cp311-cp311-macosx_13_0_universal2.whl",
   "./wheels/rhino3dm-8.17.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
   "./wheels/rhino3dm-8.17.0-cp311-cp311-win_amd64.whl",
+  "./wheels/rhino3dm-8.17.0-cp311-cp311-linux_aarch64.whl",
+  "./wheels/rhino3dm-8.17.0-cp313-cp313-linux_aarch64.whl",
 ]
 
 # Optional: build setting.

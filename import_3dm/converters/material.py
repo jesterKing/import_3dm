@@ -200,7 +200,10 @@ class PlasterWrapper(ShaderWrapper):
     NODES_LIST = ShaderWrapper.NODES_LIST + NODES_LIST
 
     def __init__(self, material):
-        super(PlasterWrapper, self).__init__(material, is_readonly=False)
+        if bpy.app.version[0] < 5:
+            super(PlasterWrapper, self).__init__(material, is_readonly=False, use_nodes=True)
+        else:
+            super(PlasterWrapper, self).__init__(material, is_readonly=False)
 
     def update(self):
         super(PlasterWrapper, self).update()
@@ -427,6 +430,8 @@ material_handlers = {
 }
 
 def harvest_from_rendercontent(model : r3d.File3dm, mat : r3d.RenderMaterial, blender_material : bpy.types.Material):
+    if bpy.app.version[0] < 5:
+        blender_material.use_nodes = True
     typeName = mat.TypeName
 
     material_handler = material_handlers.get(typeName, not_yet_implemented)
