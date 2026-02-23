@@ -3,7 +3,7 @@ schema_version = "1.0.0"
 # Example of manifest file for a Blender extension
 # Change the values according to your extension
 id = "import_3dm"
-version = "0.0.16"
+version = "0.0.17"
 name = "Import Rhinoceros 3D"
 tagline = "Import Rhinoceros 3dm files in Blender"
 maintainer = "Nathan 'jesterKing' Letwory"
