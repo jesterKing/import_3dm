@@ -19,12 +19,10 @@ lib64/
 parts/
 sdist/
 var/
-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
-*.whl
 *.zip
 *.tar.gz
 *-win*/
