@@ -24,10 +24,10 @@
 bl_info = {
     "name": "Import Rhinoceros 3D",
     "author": "Nathan 'jesterKing' Letwory, Joel Putnam, Tom Svilans, Lukas Fertig, Bernd Moeller",
-    "version": (0, 0, 17),
-    "blender": (3, 5, 0),
+    "version": (0, 0, 18),
+    "blender": (4, 2, 0),
     "location": "File > Import > Rhinoceros 3D (.3dm)",
-    "description": "This addon lets you import Rhinoceros 3dm files in Blender 3.5 and later",
+    "description": "This addon lets you import Rhinoceros 3dm files in Blender 4.2 and later",
     "warning": "The importer doesn't handle all data in 3dm files yet",
     "wiki_url": "https://github.com/jesterKing/import_3dm",
     "category": "Import-Export",
