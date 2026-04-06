@@ -33,8 +33,9 @@ import base64
 import tempfile
 import uuid
 import os
+import xml.etree.ElementTree as ET
 
-from typing import Any, Tuple
+from typing import Any, Dict, Tuple
 
 ### default Rhino material name
 DEFAULT_RHINO_MATERIAL = "Rhino Default Material"
@@ -415,9 +416,474 @@ def rcm_basic_material(rhino_material : r3d.RenderMaterial, blender_material : b
 
 
 
-def not_yet_implemented(rhino_material : r3d.RenderMaterial, blender_material : bpy.types.Material):
+# ---------------------------------------------------------------------------
+# Enscape material support
+# ---------------------------------------------------------------------------
+
+# Enscape materials are identified by this GUID as their TypeName/TypeId.
+# Since rhino3dm does not expose GetParameter or Xml for Enscape materials,
+# we parse the full RDK XML document from the model to extract the
+# Enscape-specific parameters (EnscapeDiffuseColor, EnscapeRoughness, etc.)
+# and texture paths.
+ENSCAPE_TYPE_GUID = "a040e9d1-853f-435f-bfb8-5cc4fd88c617"
+
+# Cache for parsed Enscape material data, keyed by instance-id (uppercase)
+_enscape_rdk_cache = {}  # type: Dict[str, ET.Element]
+
+
+def _build_enscape_rdk_cache(model):
+    """Parse model.RdkXml() once and cache the <material> elements
+    that use the Enscape type GUID so we can look them up by instance-id."""
+    global _enscape_rdk_cache
+    _enscape_rdk_cache = {}
+    try:
+        rdk_xml_str = model.RdkXml()
+        if not rdk_xml_str:
+            return
+        rdk_root = ET.fromstring(rdk_xml_str)
+        mat_section = rdk_root.find(".//material-section")
+        if mat_section is None:
+            return
+        for mat_elem in mat_section.findall("material"):
+            type_name = (mat_elem.get("type-name") or "").lower()
+            if type_name == ENSCAPE_TYPE_GUID:
+                inst_id = (mat_elem.get("instance-id") or "").upper()
+                if inst_id:
+                    _enscape_rdk_cache[inst_id] = mat_elem
+    except Exception as e:
+        print("import_3dm: failed to parse RDK XML for Enscape materials: {}".format(e))
+
+
+def _enscape_get_param(mat_elem, param_name, default=None):
+    """Get a parameter value from an Enscape <material> XML element.
+    Looks in <parameters-v8> first, then <parameters>."""
+    # Try parameters-v8 (newer format, uses <parameter name="..."> children)
+    pv8 = mat_elem.find("parameters-v8")
+    if pv8 is not None:
+        for p in pv8.findall("parameter"):
+            if p.get("name") == param_name:
+                return p.text if p.text else default
+    # Fallback to <parameters> (older format, tags are the parameter names)
+    params = mat_elem.find("parameters")
+    if params is not None:
+        elem = params.find(param_name)
+        if elem is not None:
+            return elem.text if elem.text else default
+    return default
+
+
+def _enscape_get_float(mat_elem, param_name, default=0.0):
+    """Get a float parameter from Enscape XML."""
+    val = _enscape_get_param(mat_elem, param_name)
+    if val is None:
+        return default
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return default
+
+
+def _enscape_get_color(mat_elem, param_name, default=(1.0, 1.0, 1.0, 1.0)):
+    """Get a color parameter from Enscape XML as an RGBA tuple.
+    Enscape stores colors as comma-separated float strings like '1,1,1,1'."""
+    val = _enscape_get_param(mat_elem, param_name)
+    if val is None:
+        return default
+    try:
+        parts = [float(x) for x in val.split(",")]
+        if len(parts) == 4:
+            return tuple(parts)
+        elif len(parts) == 3:
+            return (parts[0], parts[1], parts[2], 1.0)
+    except (ValueError, TypeError):
+        pass
+    return default
+
+
+def _enscape_get_bool(mat_elem, param_name, default=False):
+    """Get a boolean parameter from Enscape XML."""
+    val = _enscape_get_param(mat_elem, param_name)
+    if val is None:
+        return default
+    return val.lower() in ("true", "1")
+
+
+def _find_embedded_image(texture_path):
+    """Try to find an embedded image matching a texture path.
+    Enscape stores full filesystem paths; embedded images are keyed by filename."""
+    if not texture_path:
+        return None
+    # Extract just the filename from the path
+    fname = PureWindowsPath(texture_path).name
+    if not fname:
+        fname = PurePosixPath(texture_path).name
+    if fname and _efps and fname in _efps:
+        return _efps[fname]
+    return None
+
+
+def _apply_enscape_image_modifiers(nodes, links, input_socket, brightness, inverted, position_list=None):
+    current_out_socket = input_socket
+
+    # 1. Brightness
+    if abs(brightness - 1.0) > 0.001:
+        hsv_node = nodes.new('ShaderNodeHueSaturation')
+        hsv_node.inputs['Value'].default_value = brightness
+        links.new(current_out_socket, hsv_node.inputs['Color'])
+        current_out_socket = hsv_node.outputs['Color']
+        if position_list is not None:
+            position_list.append(hsv_node)
+
+    # 2. Inverted
+    if inverted:
+        invert_node = nodes.new('ShaderNodeInvert')
+        links.new(current_out_socket, invert_node.inputs['Color'])
+        current_out_socket = invert_node.outputs['Color']
+        if position_list is not None:
+            position_list.append(invert_node)
+        
+        gamma_node = nodes.new('ShaderNodeGamma')
+        gamma_node.inputs['Gamma'].default_value = 4.0
+        links.new(current_out_socket, gamma_node.inputs['Color'])
+        current_out_socket = gamma_node.outputs['Color']
+        if position_list is not None:
+            position_list.append(gamma_node)
+
+    return current_out_socket
+
+
+def enscape_material(rhino_material, blender_material, model=None):
+    """Handle Enscape materials by parsing their parameters from the RDK XML.
+    Enscape materials use proprietary parameter names (EnscapeDiffuseColor,
+    EnscapeRoughness, etc.) that are not accessible via rhino3dm's
+    GetParameter/FindChild API. Instead we parse them from model.RdkXml()."""
+
+    # Find the cached XML element for this material
+    inst_id = str(rhino_material.Id).upper()
+    mat_elem = _enscape_rdk_cache.get(inst_id)
+
+    if mat_elem is None:
+        print("import_3dm: Enscape material '{}' not found in RDK XML cache, "
+              "falling back to default".format(rhino_material.Name))
+        _fallback_not_yet_implemented(rhino_material, blender_material)
+        return
+
+    # --- Extract scalar parameters ---
+    diffuse_color = _enscape_get_color(mat_elem, "EnscapeDiffuseColor", (1.0, 1.0, 1.0, 1.0))
+    tint_color = _enscape_get_color(mat_elem, "EnscapeTintColor", (1.0, 1.0, 1.0, 1.0))
+    roughness = _enscape_get_float(mat_elem, "EnscapeRoughness", 0.5)
+    metallic = _enscape_get_float(mat_elem, "EnscapeMetallic", 0.0)
+    specular = _enscape_get_float(mat_elem, "EnscapeSpecular", 0.5)
+    opacity = _enscape_get_float(mat_elem, "EnscapeOpacity", 1.0)
+    ior = _enscape_get_float(mat_elem, "EnscapeIndexOfRefraction", 1.5)
+    emissive_strength = _enscape_get_float(mat_elem, "EnscapeEmissiveStrength", 0.0)
+    emissive_color = _enscape_get_color(mat_elem, "EnscapeEmissiveColor", (1.0, 1.0, 1.0, 1.0))
+    image_fade = _enscape_get_float(mat_elem, "EnscapeImageFade", 1.0)
+
+    # Bump map type: 0=None, 1=Bump, 2=Displacement, 3=Normal
+    bump_map_type = int(_enscape_get_float(mat_elem, "EnscapeBumpMapType", 0))
+    bump_amount = _enscape_get_float(mat_elem, "EnscapeBumpAmount", 1.0)
+    normal_intensity = _enscape_get_float(mat_elem, "EnscapeNormalMapIntensity", 1.0)
+
+    # --- Extract texture paths ---
+    diffuse_tex_path = _enscape_get_param(mat_elem, "EnscapeDiffuseTexturePath", "")
+    roughness_tex_path = _enscape_get_param(mat_elem, "EnscapeRoughnessTexturePath", "")
+    bump_tex_path = _enscape_get_param(mat_elem, "EnscapeBumpTexturePath", "")
+    transparency_tex_path = _enscape_get_param(mat_elem, "EnscapeTransparencyTexturePath", "")
+
+    diffuse_brightness = _enscape_get_float(mat_elem, "EnscapeDiffuseTextureBrightness", 1.0)
+    diffuse_inverted = _enscape_get_bool(mat_elem, "EnscapeDiffuseTextureIsInverted", False)
+    roughness_brightness = _enscape_get_float(mat_elem, "EnscapeRoughnessTextureBrightness", 1.0)
+    roughness_inverted = _enscape_get_bool(mat_elem, "EnscapeRoughnessTextureIsInverted", False)
+    bump_brightness = _enscape_get_float(mat_elem, "EnscapeBumpTextureBrightness", 1.0)
+    bump_inverted = _enscape_get_bool(mat_elem, "EnscapeBumpTextureIsInverted", False)
+    transparency_brightness = _enscape_get_float(mat_elem, "EnscapeTransparencyTextureBrightness", 1.0)
+    transparency_inverted = _enscape_get_bool(mat_elem, "EnscapeTransparencyTextureIsInverted", False)
+
+    # --- Apply color with sRGB conversion ---
+    linear_diffuse = srgb_eotf(diffuse_color)
+
+    # --- Build Principled BSDF via wrapper ---
+    pbr = PrincipledBSDFWrapper(blender_material, is_readonly=False)
+    pbr.base_color = linear_diffuse[0:3]
+    pbr.roughness = roughness
+    pbr.metallic = metallic
+    pbr.specular = specular
+    pbr.ior = ior
+
+    is_transmittance = opacity < 0.98
+
+    if is_transmittance:
+        pbr.alpha = 1.0
+        pbr.transmission = 1.0 - opacity
+    else:
+        pbr.alpha = opacity
+
+    # Emission
+    if emissive_strength > 0.0:
+        linear_emission = srgb_eotf(emissive_color)
+        pbr.emission_color = linear_emission[0:3]
+        pbr.emission_strength = emissive_strength
+
+    # --- Wire up texture nodes ---
+    tree = blender_material.node_tree
+    nodes = tree.nodes
+    links = tree.links
+    principled = pbr.node_principled_bsdf
+    principled_loc = principled.location if principled else (0, 0)
+
+    # Diffuse / Albedo texture
+    diffuse_img = _find_embedded_image(diffuse_tex_path)
+    if diffuse_img is not None:
+        tex_node = nodes.new('ShaderNodeTexImage')
+        tex_node.image = diffuse_img
+        tex_node.label = "Albedo Texture"
+        
+        position_nodes = [tex_node]
+        
+        diffuse_out = tex_node.outputs['Color']
+        diffuse_out = _apply_enscape_image_modifiers(nodes, links, diffuse_out, diffuse_brightness, diffuse_inverted, position_nodes)
+        
+        mix_node_type = 'ShaderNodeMix' if bpy.app.version >= (3, 4, 0) else 'ShaderNodeMixRGB'
+        
+        # 1. Tint Multiply Node
+        is_tint_white = abs(tint_color[0] - 1.0) < 0.001 and abs(tint_color[1] - 1.0) < 0.001 and abs(tint_color[2] - 1.0) < 0.001
+        if not is_tint_white:
+            tint_node = nodes.new(mix_node_type)
+            tint_node.label = "Tint Multiply"
+            position_nodes.append(tint_node)
+            if mix_node_type == 'ShaderNodeMix':
+                tint_node.data_type = 'RGBA'
+                tint_node.blend_type = 'MULTIPLY'
+                tint_node.inputs['Factor'].default_value = 1.0
+                tint_node.inputs['B'].default_value = list(srgb_eotf(tint_color))
+                links.new(diffuse_out, tint_node.inputs['A'])
+                diffuse_out = tint_node.outputs['Result']
+            else:
+                tint_node.blend_type = 'MULTIPLY'
+                tint_node.inputs['Fac'].default_value = 1.0
+                tint_node.inputs['Color2'].default_value = list(srgb_eotf(tint_color))
+                links.new(diffuse_out, tint_node.inputs['Color1'])
+                diffuse_out = tint_node.outputs['Color']
+
+        # 2. Image Fade Mix Node
+        fac_val = image_fade
+        if fac_val > 1.0:
+            fac_val = fac_val / 100.0
+            
+        if abs(fac_val - 1.0) > 0.001:
+            fade_node = nodes.new(mix_node_type)
+            fade_node.label = "Image Fade"
+            position_nodes.append(fade_node)
+            if mix_node_type == 'ShaderNodeMix':
+                fade_node.data_type = 'RGBA'
+                fade_node.blend_type = 'MIX'
+                fade_node.inputs['Factor'].default_value = fac_val
+                fade_node.inputs['A'].default_value = list(linear_diffuse)
+                links.new(diffuse_out, fade_node.inputs['B'])
+                diffuse_out = fade_node.outputs['Result']
+            else:
+                fade_node.blend_type = 'MIX'
+                fade_node.inputs['Fac'].default_value = fac_val
+                fade_node.inputs['Color1'].default_value = list(linear_diffuse)
+                links.new(diffuse_out, fade_node.inputs['Color2'])
+                diffuse_out = fade_node.outputs['Color']
+            
+        if principled is not None:
+            links.new(diffuse_out, principled.inputs['Base Color'])
+            cur_x = principled_loc[0] - 300
+            for n in reversed(position_nodes):
+                n.location = (cur_x, principled_loc[1])
+                cur_x -= 300
+
+    # Roughness texture
+    roughness_img = _find_embedded_image(roughness_tex_path)
+    if roughness_img is not None:
+        roughness_img.colorspace_settings.name = 'sRGB'
+        if principled is not None:
+            tex_node = nodes.new('ShaderNodeTexImage')
+            tex_node.image = roughness_img
+            tex_node.label = "Roughness Texture"
+            
+            bw_node = nodes.new('ShaderNodeRGBToBW')
+            
+            links.new(tex_node.outputs['Color'], bw_node.inputs['Color'])
+            
+            position_nodes = [tex_node, bw_node]
+
+            roughness_out = bw_node.outputs['Val']
+            roughness_out = _apply_enscape_image_modifiers(nodes, links, roughness_out, roughness_brightness, roughness_inverted, position_nodes)
+            links.new(roughness_out, principled.inputs['Roughness'])
+            
+            cur_x = principled_loc[0] - 300
+            for n in reversed(position_nodes):
+                n.location = (cur_x, principled_loc[1] - 300)
+                cur_x -= 300
+
+    # Bump / Normal / Displacement texture
+    bump_img = _find_embedded_image(bump_tex_path)
+    if bump_img is not None and bump_map_type > 0:
+        _wire_enscape_bump_texture(
+            blender_material, pbr, bump_img,
+            bump_map_type, bump_amount, normal_intensity,
+            bump_brightness, bump_inverted
+        )
+
+    # Transparency texture
+    transparency_img = _find_embedded_image(transparency_tex_path)
+    if transparency_img is not None:
+        transparency_img.colorspace_settings.name = 'sRGB'
+        if principled is not None:
+            tex_node = nodes.new('ShaderNodeTexImage')
+            tex_node.image = transparency_img
+            tex_node.label = "Transparency Texture"
+            
+            position_nodes = [tex_node]
+
+            transparency_out = tex_node.outputs['Color']
+            transparency_out = _apply_enscape_image_modifiers(nodes, links, transparency_out, transparency_brightness, transparency_inverted, position_nodes)
+            
+            if is_transmittance:
+                bw_node = nodes.new('ShaderNodeRGBToBW')
+                position_nodes.append(bw_node)
+                links.new(transparency_out, bw_node.inputs['Color'])
+                
+                inv_math_node = nodes.new('ShaderNodeMath')
+                inv_math_node.operation = 'SUBTRACT'
+                inv_math_node.inputs[0].default_value = 1.0
+                position_nodes.append(inv_math_node)
+                links.new(bw_node.outputs['Val'], inv_math_node.inputs[1])
+                
+                t_socket = principled.inputs.get('Transmission Weight') or principled.inputs.get('Transmission')
+                if t_socket:
+                    links.new(inv_math_node.outputs['Value'], t_socket)
+            else:
+                links.new(transparency_out, principled.inputs['Alpha'])
+
+            cur_x = principled_loc[0] - 300
+            for n in reversed(position_nodes):
+                n.location = (cur_x, principled_loc[1] - 900)
+                cur_x -= 300
+
+
+def _wire_enscape_bump_texture(blender_material, pbr, image, bump_map_type,
+                               bump_amount, normal_intensity,
+                               bump_brightness, bump_inverted):
+    """Wire a bump/normal/displacement texture into the Principled BSDF.
+    bump_map_type: 1=Bump, 2=Displacement, 3=Normal
+    Only one of these is active at a time in Enscape."""
+    tree = blender_material.node_tree
+    nodes = tree.nodes
+    links = tree.links
+    principled = pbr.node_principled_bsdf
+
+    if principled is None:
+        return
+
+    principled_loc = principled.location if principled else (0, 0)
+
+    if bump_map_type == 2:
+        # Normal map
+        image.colorspace_settings.name = 'Non-Color'
+
+        tex_node = nodes.new('ShaderNodeTexImage')
+        tex_node.image = image
+        tex_node.label = "Normal Map Texture"
+        
+        position_nodes = [tex_node]
+
+        bump_out = tex_node.outputs['Color']
+        bump_out = _apply_enscape_image_modifiers(nodes, links, bump_out, bump_brightness, bump_inverted, position_nodes)
+
+        normal_node = nodes.new('ShaderNodeNormalMap')
+        normal_node.label = "Normal Map"
+        normal_node.inputs['Strength'].default_value = normal_intensity
+        position_nodes.append(normal_node)
+
+        links.new(bump_out, normal_node.inputs['Color'])
+        links.new(normal_node.outputs['Normal'], principled.inputs['Normal'])
+
+        cur_x = principled_loc[0] - 300
+        for n in reversed(position_nodes):
+            n.location = (cur_x, principled_loc[1] - 600)
+            cur_x -= 300
+
+    elif bump_map_type == 1:
+        # Bump map (grayscale height map)
+        image.colorspace_settings.name = 'sRGB'
+
+        tex_node = nodes.new('ShaderNodeTexImage')
+        tex_node.image = image
+        tex_node.label = "Bump Map Texture"
+        
+        bw_node = nodes.new('ShaderNodeRGBToBW')
+        links.new(tex_node.outputs['Color'], bw_node.inputs['Color'])
+        
+        position_nodes = [tex_node, bw_node]
+
+        bump_out = bw_node.outputs['Val']
+        bump_out = _apply_enscape_image_modifiers(nodes, links, bump_out, bump_brightness, bump_inverted, position_nodes)
+
+        bump_node = nodes.new('ShaderNodeBump')
+        bump_node.label = "Bump Map"
+        bump_node.inputs['Strength'].default_value = bump_amount
+        position_nodes.append(bump_node)
+
+        links.new(bump_out, bump_node.inputs['Height'])
+        links.new(bump_node.outputs['Normal'], principled.inputs['Normal'])
+
+        cur_x = principled_loc[0] - 300
+        for n in reversed(position_nodes):
+            n.location = (cur_x, principled_loc[1] - 600)
+            cur_x -= 300
+
+    elif bump_map_type == 3:
+        # Displacement map - wired to material output displacement input
+        image.colorspace_settings.name = 'sRGB'
+
+        tex_node = nodes.new('ShaderNodeTexImage')
+        tex_node.image = image
+        tex_node.label = "Displacement Texture"
+        
+        bw_node = nodes.new('ShaderNodeRGBToBW')
+        links.new(tex_node.outputs['Color'], bw_node.inputs['Color'])
+
+        position_nodes = [tex_node, bw_node]
+
+        bump_out = bw_node.outputs['Val']
+        bump_out = _apply_enscape_image_modifiers(nodes, links, bump_out, bump_brightness, bump_inverted, position_nodes)
+
+        disp_node = nodes.new('ShaderNodeDisplacement')
+        disp_node.label = "Displacement"
+        disp_node.inputs['Scale'].default_value = bump_amount
+        position_nodes.append(disp_node)
+
+        links.new(bump_out, disp_node.inputs['Height'])
+
+        # Find the material output node
+        mat_output = None
+        for node in nodes:
+            if node.type == 'OUTPUT_MATERIAL':
+                mat_output = node
+                break
+        if mat_output is not None:
+            links.new(disp_node.outputs['Displacement'],
+                      mat_output.inputs['Displacement'])
+
+        cur_x = principled_loc[0] - 300
+        for n in reversed(position_nodes):
+            n.location = (cur_x, principled_loc[1] - 600)
+            cur_x -= 300
+
+
+def _fallback_not_yet_implemented(rhino_material, blender_material):
+    """Fallback for materials whose type is not yet handled."""
     paint = PlasterWrapper(blender_material)
     paint.base_color = (1.0, 0.0, 1.0, 1.0)
+
+
+def not_yet_implemented(rhino_material, blender_material, **kwargs):
+    _fallback_not_yet_implemented(rhino_material, blender_material)
 
 material_handlers = {
     'rdk-paint-material': paint_material,
@@ -427,15 +893,20 @@ material_handlers = {
     'rdk-plastic-material': plastic_material,
     'rcm-basic-material': rcm_basic_material,
     '5a8d7b9b-cdc9-49de-8c16-2ef64fb097ab': pbr_material,
+    ENSCAPE_TYPE_GUID: enscape_material,
 }
 
-def harvest_from_rendercontent(model : r3d.File3dm, mat : r3d.RenderMaterial, blender_material : bpy.types.Material):
+def harvest_from_rendercontent(model, mat, blender_material):
     if bpy.app.version[0] < 5:
         blender_material.use_nodes = True
     typeName = mat.TypeName
 
     material_handler = material_handlers.get(typeName, not_yet_implemented)
-    material_handler(mat, blender_material)
+    # Enscape handler needs the model reference; others ignore extra kwargs
+    if typeName.lower() == ENSCAPE_TYPE_GUID:
+        material_handler(mat, blender_material, model=model)
+    else:
+        material_handler(mat, blender_material)
 
 
 _model = None
@@ -483,6 +954,7 @@ def handle_materials(context, model : r3d.File3dm, materials, update):
     """
     """
     handle_embedded_files(model)
+    _build_enscape_rdk_cache(model)
 
     if DEFAULT_RHINO_MATERIAL not in materials:
         tags = utils.create_tag_dict(DEFAULT_RHINO_MATERIAL_ID, DEFAULT_RHINO_MATERIAL)
